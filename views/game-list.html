@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game History</title>
+    <style>
+        /* Consistent styling with other pages */
+        body { 
+            font-family: sans-serif; 
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            text-align: left; 
+            padding: 12px; 
+        }
+        thead { 
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Game History</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Winner</th>
+                <th>Loser</th>
+                <th>Fouled on Black</th>
+                <th>Balls Remaining</th>
+                <th>Rematch Round</th>
+                <th>Edit</th>
+            </tr>
+        </thead>
+        <tbody id="games-list-body">
+            </tbody>
+    </table>
+
+    <script>
+        /**
+         * Fetches all games and users, then populates the history table.
+         */
+        async function populateGameList() {
+            const tableBody = document.getElementById('games-list-body');
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Loading game history...</td></tr>';
+
+            try {
+                // 1. Fetch users and games in parallel for efficiency
+                const [usersResponse, gamesResponse] = await Promise.all([
+                    fetch('/api/users'),
+                    fetch('/api/game-list')
+                ]);
+
+                if (!usersResponse.ok || !gamesResponse.ok) {
+                    throw new Error('Failed to fetch required data.');
+                }
+
+                const users = await usersResponse.json();
+                const games = await gamesResponse.json();
+
+                // 2. Create a user lookup map for fast, easy access (O(1) lookup).
+                // This fulfills the "fetch users once" requirement.
+                const userMap = new Map(users.map(user => [user.id, user]));
+
+                if (games.length === 0) {
+                     tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No games have been logged yet.</td></tr>';
+                     return;
+                }
+
+                // 3. Process each game and create its table row HTML
+                const rowsHtml = games.map(game => {
+                    // Determine loser ID
+                    const loser_id = game.winner_id === game.player1_id ? game.player2_id : game.player1_id;
+                    
+                    // Get user objects from the map
+                    const winner = userMap.get(game.winner_id);
+                    const loser = userMap.get(loser_id);
+
+                    // Default user object to prevent errors if a user is not found
+                    const unknownUser = { name: 'Unknown', team: 'N/A', team_color: '#ffffff' };
+                    const winnerInfo = winner || unknownUser;
+                    const loserInfo = loser || unknownUser;
+
+                    // Format data for display
+                    const playedDate = new Date(game.played_at).toLocaleDateString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                    });
+                    const fouledText = game.fouled_on_black ? 'Yes' : 'No';
+                    const rematchText = game.rematch_id === 0 ? 'First Match' : `Rematch ${game.rematch_id}`;
+                    
+                    // Construct the edit link with query parameters
+                    const editUrl = `/edit-game?player1_id=${game.player1_id}&player2_id=${game.player2_id}&rematch_id=${game.rematch_id}`;
+
+                    return `
+                        <tr>
+                            <td>${playedDate}</td>
+                            <td style="background-color: ${winnerInfo.team_color};">${winnerInfo.name} (${winnerInfo.team})</td>
+                            <td style="background-color: ${loserInfo.team_color};">${loserInfo.name} (${loserInfo.team})</td>
+                            <td>${fouledText}</td>
+                            <td>${game.balls_remaining}</td>
+                            <td>${rematchText}</td>
+                            <td><a href="${editUrl}">Edit</a></td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // 4. Populate the table body
+                tableBody.innerHTML = rowsHtml;
+
+            } catch (error) {
+                console.error("Error populating game list:", error);
+                tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Failed to load game history.</td></tr>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', populateGameList);
+    </script>
+
+</body>
+</html>

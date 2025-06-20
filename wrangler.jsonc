@@ -11,12 +11,22 @@
 		"nodejs_compat",
 		"global_fetch_strictly_public"
 	],
+	
 	"assets": {
 		"directory": "./public"
 	},
+	
 	"observability": {
 		"enabled": true
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "pool-league-db",
+			"database_id": "f8a97ef1-e251-4fec-b420-583e32581f9f"
+		}
+	]
+
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

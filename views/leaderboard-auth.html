@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><a href="/" style="text-decoration: none; color: inherit;">St Paul's League</a></div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/log-game">Record New Game</a>
+            <a href="/game-list">View Games List</a>
+            <a href="/audit-log">View Audit Log</a>
+            <a href="/profile">Customise Profile</a>
+            <a href="/auth/logout">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>Current Standings</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Team Name</th>
+                    <th>Points</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                    <th>Fouls on Black</th>
+                    <th>Ball Difference</th>
+                    <th>Played</th>
+                    <th>Win:Loss Ratio</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <!-- Rows will be dynamically inserted here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+
+    <script>
+        /**
+         * Fetches all data and populates the leaderboard table.
+         */
+        async function populateLeaderboard() {
+            const tableBody = document.getElementById('leaderboard-body');
+            tableBody.innerHTML = '<tr><td colspan="9">Loading...</td></tr>'; // Show loading state
+
+            try {
+                // 1. Fetch the main leaderboard stats
+                const leaderboardResponse = await fetch('/api/leaderboard');
+                if (!leaderboardResponse.ok) throw new Error('Failed to fetch leaderboard');
+                const leaderboardData = await leaderboardResponse.json();
+
+                // 2. Pre-process data to calculate points for sorting
+                const processedData = leaderboardData.map(playerStats => {
+                    const points = playerStats.wins * 3 + playerStats.losses - playerStats.fouls_on_black;
+                    return { ...playerStats, points }; // Add points to each player's object
+                });
+
+                // 3. Sort the data
+                processedData.sort((a, b) => {
+                    // Primary sort: points descending
+                    if (b.points !== a.points) {
+                        return b.points - a.points;
+                    }
+                    // Secondary sort: fouls_on_black ascending
+                    if (a.fouls_on_black !== b.fouls_on_black) {
+                        return a.fouls_on_black - b.fouls_on_black;
+                    }
+                    // Tertiary sort: balls_remaining ascending
+                    return a.balls_remaining - b.balls_remaining;
+                });
+
+                // 4. Generate HTML rows from the sorted data
+                const rowsHtml = await Promise.all(processedData.map(async (playerStats) => {
+                    // For each player, fetch their user details
+                    const userResponse = await fetch(`/api/users/${playerStats.playerId}`);
+                    if (!userResponse.ok) {
+                        console.error(`Failed to fetch user data for ${playerStats.playerId}`);
+                        return ''; // Skip this player on error
+                    }
+                    const userData = await userResponse.json();
+
+                    // Calculate derived stats
+                    const played = playerStats.wins + playerStats.losses;
+                    // Handle division by zero for the win/loss ratio
+                    const winLossRatio = playerStats.losses > 0 ? (playerStats.wins / playerStats.losses).toFixed(2) : (playerStats.wins > 0 ? "∞" : "0.00");
+                    const color = userData.team_color || '#ffffff'; // Default to white if no color
+
+                    // Create the HTML for the table row
+                    return `
+                        <tr>
+                            <td style="background-color: ${color};">${userData.name || 'N/A'}</td>
+                            <td style="background-color: ${color};">${userData.team || 'N/A'}</td>
+                            <td>${playerStats.points}</td>
+                            <td>${playerStats.wins}</td>
+                            <td>${playerStats.losses}</td>
+                            <td>${playerStats.fouls_on_black}</td>
+                            <td>${playerStats.balls_remaining}</td>
+                            <td>${played}</td>
+                            <td>${winLossRatio}</td>
+                        </tr>
+                    `;
+                }));
+
+                // 5. Update the table body with all the generated rows
+                tableBody.innerHTML = rowsHtml.join('');
+
+            } catch (error) {
+                console.error('Error building leaderboard:', error);
+                // Optionally, display an error message in the UI
+                tableBody.innerHTML = '<tr><td colspan="9">Failed to load leaderboard.</td></tr>';
+            }
+        }
+
+        // Run the function after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', populateLeaderboard);
+    </script>
+
+</body>
+</html>

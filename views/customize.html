@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customise Profile</title>
+    <link rel="stylesheet" href="/css/customize.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Customise Profile</h1>
+
+        <form id="profile-form">
+            <div class="form-group">
+                <label for="name">Display Name</label>
+                <input type="text" id="name" name="name" required placeholder="Enter your name">
+            </div>
+
+            <div class="form-group">
+                <label for="team">Team Name</label>
+                <input type="text" id="team" name="team" required placeholder="Enter your team's name">
+            </div>
+            
+            <div class="form-group">
+                <label for="team_color">Team Color</label>
+                <input type="color" id="team_color" name="team_color" required>
+            </div>
+
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+
+    <script>
+        /**
+         * Fetches the current user profile and populates the form fields.
+         */
+        async function loadProfile() {
+            const nameInput = document.getElementById('name');
+            const teamInput = document.getElementById('team');
+            const colorInput = document.getElementById('team_color');
+            const form = document.getElementById('profile-form');
+
+            try {
+                const response = await fetch('/api/profile');
+                if (!response.ok) throw new Error('Failed to fetch profile');
+                const profile = await response.json();
+
+                // Populate the form with the fetched data
+                nameInput.value = profile.name;
+                teamInput.value = profile.team;
+                colorInput.value = profile.team_color;
+
+            } catch (error) {
+                console.error("Error loading profile:", error);
+                form.innerHTML = '<p>Could not load your profile. Please try again later.</p>';
+            }
+        }
+        
+        // Add a submit handler to the form
+        document.getElementById('profile-form').addEventListener('submit', async function(event) {
+            // Prevent the default form submission behavior
+            event.preventDefault(); 
+            
+            // Collect data from the form
+            const formData = new FormData(event.target);
+            const updates = Object.fromEntries(formData.entries());
+
+            try {
+                // PATCH the data to the server
+                const response = await fetch('/api/profile', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updates),
+                });
+
+                if (!response.ok) throw new Error('Failed to save changes.');
+
+                // On success, show a confirmation and redirect
+                alert('Profile saved successfully! Redirecting to homepage...');
+                window.location.href = '/'; // Redirect to the homepage
+
+            } catch(error) {
+                console.error('Error saving profile:', error);
+                alert('An error occurred while saving. Please try again.');
+            }
+        });
+
+        // Load the profile data when the page loads
+        document.addEventListener('DOMContentLoaded', loadProfile);
+
+    </script>
+
+</body>
+</html>

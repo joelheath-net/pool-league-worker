@@ -8,16 +8,15 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-export default {
-	async fetch(request, env, ctx) {
-		const url = new URL(request.url);
-		switch (url.pathname) {
-			case '/message':
-				return new Response('Hello, World!');
-			case '/random':
-				return new Response(crypto.randomUUID());
-			default:
-				return new Response('Not Found', { status: 404 });
-		}
-	},
-};
+import { Hono } from 'hono';
+import authRoutes from './auth';
+import apiRoutes from './api';
+import webRoutes from './web';
+
+const app = new Hono();
+
+app.route('/auth', authRoutes);
+app.route('/api', apiRoutes);
+app.route('/', webRoutes);
+
+export default app;
