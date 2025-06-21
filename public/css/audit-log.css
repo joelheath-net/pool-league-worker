@@ -1,0 +1,47 @@
+.audit-log-container {
+    max-width: 800px;
+}
+
+.audit-entry {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.audit-entry-header h3 {
+    margin: 0 0 5px 0;
+    color: #0056b3;
+}
+
+.audit-entry-header .meta {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.audit-details h4 {
+    margin: 0 0 10px 0;
+    color: #343a40;
+}
+
+.audit-details ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.audit-details li {
+    padding: 4px 0;
+    color: #495057;
+}
+
+.loading, .error {
+    text-align: center;
+    font-size: 1.2em;
+    color: #666;
+}

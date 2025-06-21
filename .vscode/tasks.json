@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Wrangler Dev Server",
+      "type": "shell",
+      "command": "npx wrangler dev", // -- port 3000
+      "isBackground": true,
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": {
+        "owner": "wrangler",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Listening on http://127.0.0.1:8787.*",
+          "endsPattern": ".*"
+        }
+      }
+    }
+  ]
+}

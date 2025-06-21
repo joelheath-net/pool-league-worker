@@ -17,10 +17,18 @@ export const isAuthenticated = (c) => {
 }; 
 
 // This middleware will be used to protect our API and web routes
-export const authMiddleware = async (c, next) => {
+export const protectAPI = async (c, next) => {
     if (isAuthenticated(c)) {
         await next();
     } else {
         return c.json({ message: 'Invalid token' }, 401);
+    }
+};
+
+export const protectWeb = async (c, next) => {
+    if (isAuthenticated(c)) {
+        await next();
+    } else {
+        return c.redirect('/');
     }
 };

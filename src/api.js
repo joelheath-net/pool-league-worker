@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { authMiddleware } from './middleware.js';
+import { protectAPI } from './middleware.js';
 
 const api = new Hono();
 
@@ -50,8 +50,13 @@ api.get('/leaderboard', async (c) => {
 
 // --- AUTHENTICATED ROUTES ---
 
+api.get('/users-sensitive', protectAPI, async (c) => {
+    const { results } = await c.env.DB.prepare('SELECT id, name, email FROM users').all();
+    return c.json(results);
+});
+
 // Get the current user's profile
-api.get('/profile', authMiddleware, async (c) => {
+api.get('/profile', protectAPI, async (c) => {
     const userPayload = await c.get('user');
 
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userPayload.sub).first();
@@ -59,7 +64,7 @@ api.get('/profile', authMiddleware, async (c) => {
 });
 
 // Update the current user's profile
-api.patch('/profile', authMiddleware, async (c) => {
+api.patch('/profile', protectAPI, async (c) => {
     const userPayload = await c.get('user');
     const { name, team, team_color } = await c.req.json();
 
@@ -75,7 +80,7 @@ api.patch('/profile', authMiddleware, async (c) => {
 });
 
 // Log a new game
-api.post('/log-game', authMiddleware, async (c) => {
+api.post('/log-game', protectAPI, async (c) => {
     const userPayload = await c.get('user');
     const { winner, loser, balls_remaining, fouled_on_black, date } = await c.req.json();
 
@@ -96,7 +101,7 @@ api.post('/log-game', authMiddleware, async (c) => {
 });
 
 // Get a list of all games (latest revisions)
-api.get('/game-list', authMiddleware, async (c) => {
+api.get('/game-list', protectAPI, async (c) => {
      const { results } = await c.env.DB.prepare(`
         WITH RankedRevisions AS (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY player1_id, player2_id, rematch_id ORDER BY revision_id DESC) as rn
@@ -108,7 +113,7 @@ api.get('/game-list', authMiddleware, async (c) => {
 });
 
 // Get all revisions for the audit log
-api.get('/audit-log', authMiddleware, async (c) => {
+api.get('/audit-log', protectAPI, async (c) => {
     const { results } = await c.env.DB.prepare('SELECT * FROM game_revisions ORDER BY authored_at DESC').all();
     return c.json(results);
 });
@@ -118,7 +123,7 @@ api.get('/audit-log', authMiddleware, async (c) => {
 // Add these two new routes inside src/api.js, after the '/audit-log' route
 
 // Get a specific game's latest revision by its composite ID
-api.get('/games/:player1Id/:player2Id/:rematchId', authMiddleware, async (c) => {
+api.get('/games/:player1Id/:player2Id/:rematchId', protectAPI, async (c) => {
     let { player1Id, player2Id, rematchId } = c.req.param();
 
     // Ensure player1Id is always the smaller one, matching the model's logic
@@ -140,7 +145,7 @@ api.get('/games/:player1Id/:player2Id/:rematchId', authMiddleware, async (c) => 
 });
 
 // Update a game by creating a new revision
-api.patch('/game', authMiddleware, async (c) => {
+api.patch('/game', protectAPI, async (c) => {
     const userPayload = await c.get('user');
     const { player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at } = await c.req.json();
 

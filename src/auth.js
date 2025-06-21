@@ -2,10 +2,14 @@ import { Hono } from 'hono';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import { sign } from 'hono/jwt';
 import { googleAuth } from '@hono/oauth-providers/google';
+import { isAuthenticated } from './middleware'; // Assuming you have a middleware to check authentication
 
 const auth = new Hono();
 
 auth.use('/google', async (c, next) => {
+    if (isAuthenticated(c))
+        return c.redirect('/');
+
     const googleAuthMiddleware = googleAuth({
         client_id: c.env.GOOGLE_CLIENT_ID,
         client_secret: c.env.GOOGLE_CLIENT_SECRET,

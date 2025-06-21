@@ -1,79 +1,56 @@
 import { Hono } from 'hono';
-import { getCookie } from 'hono/cookie';
-import { verify } from 'hono/jwt';
+import { protectWeb } from './middleware';
+import { isAuthenticated as isAuthentic } from './middleware';
 
-// Import all of your HTML and CSS files as raw text
-import leaderboardAuth from '../views/leaderboard-auth.html';
-import leaderboardUnauth from '../views/leaderboard-unauth.html';
-import signinPage from '../views/signin.html';
-import logGamePage from '../views/log-game.html';
-import gameListPage from '../views/game-list.html';
-import customizePage from '../views/customize.html'; // Renamed from customize.html for clarity
-import editGamePage from '../views/edit-game.html';
-import auditLogPage from '../views/audit-log.html';
-
-import styleCss from '../public/css/style.css';
-import logGameCss from '../public/css/log-game.css';
-import customizeCss from '../public/css/customize.css';
+import { Layout } from '../views/layout';
+import { LeaderboardPage } from '../views/leaderboard';
+import { LogGamePage } from '../views/log-game';
+import { GamesPage } from '../views/game-list';
+import { AuditPage } from '../views/audit-log';
+import { CustomizePage } from '../views/customize';
+import { EditGamePage } from '../views/edit-game';
 
 const web = new Hono();
 
-// --- Middleware to check authentication status for pages ---
-// This is slightly different from the API middleware; it doesn't block,
-// it just checks for a user and attaches it to the context.
-const pageAuthMiddleware = async (c, next) => {
-    const token = getCookie(c, 'auth_token');
-    if (token) {
-        try {
-            const payload = await verify(token, c.env.JWT_SECRET);
-            c.set('user', payload);
-        } catch (e) {
-            // Invalid token, treat as logged out
-            c.set('user', null);
-        }
-    }
+// Use Hono's renderer middleware
+web.use('*', async (c, next) => {
+    c.setRenderer((content, props) => {
+        const title = props.title || 'St Paul\'s League';
+        const style = props.style;
+        const script = props.script;
+        const isAuthenticated = isAuthentic(c);
+
+        return c.html(
+            <Layout {...{ title, style, script, isAuthenticated }}>
+                {content}
+            </Layout>
+        );
+    });
     await next();
-};
-
-// Helper to return a response with the correct Content-Type
-const html = (content) => new Response(content, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-const css = (content) => new Response(content, { headers: { 'Content-Type': 'text/css; charset=utf-8' } });
-
-// --- CSS Routes ---
-web.get('/css/leaderboard.css', (c) => css(leaderboardCss));
-web.get('/css/style.css', (c) => css(styleCss));
-web.get('/css/log-game.css', (c) => css(logGameCss));
-web.get('/css/customize.css', (c) => css(customizeCss));
-
-// --- Page Routes ---
-
-// The root route decides which leaderboard to show
-web.get('/', pageAuthMiddleware, (c) => {
-    const user = c.get('user');
-    return user ? html(leaderboardAuth) : html(leaderboardUnauth);
 });
 
-web.get('/signin', (c) => html(signinPage));
+web.get('/', (c) => {
+    return c.render(<LeaderboardPage />, { title: `St Paul's League`, script: '/js/leaderboard.js' });
+});
 
-// For all subsequent pages, we require the user to be logged in.
-// If they aren't, we redirect them to the sign-in page.
-web.use('/log-game', pageAuthMiddleware);
-web.use('/game-list', pageAuthMiddleware);
-web.use('/profile', pageAuthMiddleware);
-web.use('/edit-game', pageAuthMiddleware);
-web.use('/audit-log', pageAuthMiddleware);
+web.get('/log-game', protectWeb, (c) => {
+    return c.render(<LogGamePage />, { title: 'Log a Game', script: '/js/log-game.js' });
+});
 
-const requireAuth = async (c, next) => {
-    if (!c.get('user')) {
-        return c.redirect('/signin');
-    }
-    await next();
-};
+web.get('/game-list', protectWeb, (c) => {
+    return c.render(<GamesPage />, { title: 'Game History', script: '/js/game-list.js' });
+});
 
-web.get('/log-game', requireAuth, (c) => html(logGamePage));
-web.get('/game-list', requireAuth, (c) => html(gameListPage));
-web.get('/profile', requireAuth, (c) => html(customizePage));
-web.get('/edit-game', requireAuth, (c) => html(editGamePage));
-web.get('/audit-log', requireAuth, (c) => html(auditLogPage));
+web.get('/audit-log', protectWeb, (c) => {
+    return c.render(<AuditPage />, { title: 'Audit Log', script: '/js/audit-log.js', style: '/css/audit-log.css' });
+});
+
+web.get('/profile', protectWeb, (c) => {
+    return c.render(<CustomizePage />, { title: 'Customise Profile', script: '/js/customize.js', });
+});
+
+web.get('/edit-game', protectWeb, (c) => {
+    return c.render(<EditGamePage />, { title: 'Edit Game', script: '/js/edit-game.js', style: '/css/edit-game.css' });
+});
 
 export default web;
