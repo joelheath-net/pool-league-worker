@@ -1,13 +1,13 @@
 import { html } from 'hono/html'
+import { MobileStyles } from './mobile-style';
 
-const Header = ({ isAuthenticated }) => {
-    const headerClass = isAuthenticated ? 'header is-authenticated' : 'header';
-
+const Header = ({ isAuthenticated, isAdmin }) => {
     const authenticatedNav = html`
         <nav>
             <a href="/log-game">Record New Game</a>
             <a href="/game-list">View Games List</a>
             <a href="/audit-log">View Audit Log</a>
+            ${isAdmin ? html`<a href="/admin-panel">Admin Dashboard</a>` : ''}
             <a href="/profile">Customise Profile</a>
             <a href="/auth/logout">Logout</a>
         </nav>
@@ -20,7 +20,7 @@ const Header = ({ isAuthenticated }) => {
     `;
 
     return html`
-        <header class="${headerClass}">
+        <header>
             <div class="logo"><a href="/" style="text-decoration: none; color: inherit;">St Paul's League</a></div>
             
             <button class="hamburger-menu" aria-label="Open navigation menu">
@@ -35,6 +35,10 @@ const Header = ({ isAuthenticated }) => {
 };
 
 export const Layout = (props) => {
+    const cutoff = props.isAdmin ? "1130px" : props.isAuthenticated ? "950px" : "350px";
+    const style = html`<link rel="stylesheet" href="${props.style}" />`;
+    const script = html`<script src="${props.script}"></script>`;
+
     return html`
         <!DOCTYPE html>
         <html lang="en">
@@ -43,10 +47,11 @@ export const Layout = (props) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>${props.title}</title>
             <link rel="stylesheet" href="/css/style.css" />
-            ${props.style ? html`<link rel="stylesheet" href="${props.style}" />` : ''}
+            ${props.style ? style : ''}
+            ${<MobileStyles cutoff={cutoff}  />}
         </head>
         <body>
-            ${<Header isAuthenticated={props.isAuthenticated} />}
+            ${<Header isAuthenticated={props.isAuthenticated} isAdmin={props.isAdmin} />}
 
             <main style="flex-grow: 1;">
                 ${props.children}
@@ -59,7 +64,7 @@ export const Layout = (props) => {
             </footer>
 
             <script src="/js/main.js"></script>
-            ${props.script ? html`<script src="${props.script}"></script>` : ''}
+            ${props.script ? script : ''}
         </body>
         </html>
     `;

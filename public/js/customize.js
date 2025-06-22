@@ -1,3 +1,4 @@
+const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
 
 /**
  * Fetches the current user profile and populates the form fields.
@@ -20,7 +21,7 @@ async function loadProfile() {
 
     } catch (error) {
         console.error("Error loading profile:", error);
-        form.innerHTML = '<p>Could not load your profile. Please try again later.</p>';
+        form.innerHTML = html`<p>Could not load your profile. Please try again later.</p>`;
     }
 }
 
@@ -45,9 +46,7 @@ document.getElementById('profile-form').addEventListener('submit', async functio
 
         if (!response.ok) throw new Error('Failed to save changes.');
 
-        // On success, show a confirmation and redirect
-        alert('Profile saved successfully! Redirecting to homepage...');
-        window.location.href = '/'; // Redirect to the homepage
+        window.location.href = '/';
 
     } catch(error) {
         console.error('Error saving profile:', error);

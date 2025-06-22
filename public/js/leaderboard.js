@@ -1,3 +1,5 @@
+const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
+
 function getContrastingTextColor(hexColor) {
     // Remove the hash at the start if it's there
     hexColor = hexColor.replace(/^#/, '');
@@ -20,7 +22,6 @@ function getContrastingTextColor(hexColor) {
  */
 async function populateLeaderboard() {
     const tableBody = document.getElementById('leaderboard-body');
-    tableBody.innerHTML = '<tr><td colspan="9">Loading...</td></tr>'; // Show loading state
 
     try {
         // 1. Fetch the main leaderboard stats
@@ -64,10 +65,6 @@ async function populateLeaderboard() {
             const winLossRatio = playerStats.losses > 0 ? (playerStats.wins / playerStats.losses).toFixed(2) : (playerStats.wins > 0 ? "∞" : "0.00");
             const color = userData.team_color || '#ffffff'; // Default to white if no color
             const textColor = getContrastingTextColor(color);
-
-
-            // this is literally just for the sake of code colouring
-            const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
 
             // Create the HTML for the table row
             return html`

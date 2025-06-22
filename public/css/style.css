@@ -66,38 +66,23 @@ tbody tr:nth-child(even) {
 }
 
 /* Sticky table column styling */
-th.sticky,
-td.sticky {
-  position: sticky;
-  left: 0;
-  z-index: 0; /* Ensure sticky elements are on top */
+th.sticky, td.sticky {
+    position: sticky;
+    left: 0;
+    z-index: 0; /* Ensure sticky elements are on top */
+    border-left: 1px solid #ddd;
 }
 
-.table-container.is-overflowing th.sticky::after,
-.table-container.is-overflowing td.sticky::after {
-  content: "";
-  position: absolute;
-  right: -6px;
-  top: 0;
-  bottom: -1px;
-  width: 5px;
-  border-left: 1px solid var(--borderColor);
-  background: linear-gradient(90deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0) 100%);
+.table-container.is-overflowing th.sticky::after, .table-container.is-overflowing td.sticky::after {
+    content: "";
+    position: absolute;
+    right: -6px;
+    top: 0;
+    bottom: -1px;
+    width: 5px;
+    
+    background: linear-gradient(90deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0) 100%);
 }
-
-.table-container.is-overflowing th.sticky::before,
-.table-container.is-overflowing td.sticky::before {
-  content: "";
-  position: absolute;
-  left: -6px;
-  top: 0;
-  bottom: -1px;
-  width: 5px;
-  border-right: 1px solid var(--borderColor);
-  background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.08) 100%);
-}
-
-
 
 /* Forms */
 form {
@@ -186,7 +171,7 @@ a:hover {
     text-decoration: underline;
 }
 
-.header {
+header {
     background-color: #ffffff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     padding: 10px 20px;
@@ -196,13 +181,13 @@ a:hover {
     min-height: 2rem;
 }
 
-.header .logo {
+header .logo {
     font-size: 1.5em;
     font-weight: bold;
     color: #333;
 }
 
-.header nav a {
+header nav a {
     color: #007bff;
     text-decoration: none;
     padding: 10px 15px;
@@ -211,7 +196,7 @@ a:hover {
     background-color: #fff;
 }
 
-.header nav a:hover, .header nav a.active {
+header nav a:hover, header nav a.active {
     background-color: #007bff;
     color: #ffffff;
     text-decoration: none;
@@ -249,72 +234,4 @@ a:hover {
     transition: all 0.3s linear;
     position: relative;
     transform-origin: 1px;
-}
-
-/* --- Mobile Styles for Authenticated Header (Wider Breakpoint) --- */
-@media (max-width: 950px) {
-    .header.is-authenticated nav {
-        display: none;
-        flex-direction: column;
-        width: 100%;
-        position: absolute;
-        top: 60px; /* Adjust based on your header's height */
-        left: 0;
-        background-color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    .header.is-authenticated nav.is-active {
-        display: flex;
-    }
-
-    .header.is-authenticated nav a {
-        text-align: center;
-        padding: 15px;
-        border-bottom: 1px solid #f4f4f9;
-    }
-
-    .header.is-authenticated nav a:hover,
-    .header.is-authenticated nav a.active {
-       background-color: #007bff;
-       color: #ffffff;
-    }
-
-    .header.is-authenticated .hamburger-menu {
-        display: flex;
-    }
-}
-
-/* --- Mobile Styles for Unauthenticated Header (Narrower Breakpoint) --- */
-@media (max-width: 350px) {
-    .header:not(.is-authenticated) nav {
-        display: none;
-        flex-direction: column;
-        width: 100%;
-        position: absolute;
-        top: 60px; /* Adjust based on your header's height */
-        left: 0;
-        background-color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    .header:not(.is-authenticated) nav.is-active {
-        display: flex;
-    }
-
-    .header:not(.is-authenticated) nav a {
-        text-align: center;
-        padding: 15px;
-        border-bottom: 1px solid #f4f4f9;
-    }
-
-    .header:not(.is-authenticated) nav a:hover,
-    .header:not(.is-authenticated) nav a.active {
-       background-color: #007bff;
-       color: #ffffff;
-    }
-
-    .header:not(.is-authenticated) .hamburger-menu {
-        display: flex;
-    }
 }

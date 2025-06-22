@@ -23,9 +23,12 @@
 		{
 			"binding": "DB",
 			"database_name": "pool-league-db",
-			"database_id": "f8a97ef1-e251-4fec-b420-583e32581f9f"
+			"database_id": "54acd17f-9360-4d8a-bc2c-5ecf9beacb70"
 		}
-	]
+	],
+	"text_blobs": {
+    	"SETUP_SQL": "./setup.sql"
+  	}
 
 	/**
 	 * Smart Placement

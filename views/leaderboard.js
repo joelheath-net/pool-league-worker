@@ -18,7 +18,11 @@ export const LeaderboardPage = () => {
                         </tr>
                     </thead>
                     <tbody id="leaderboard-body">
-                        {/* Rows will be dynamically inserted here by JavaScript */}
+                        <tr>
+                            <td colspan="9" style="text-align: center;">
+                                <div class="table-cell">Loading...</div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>

@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
     team        TEXT  DEFAULT 'My Team'                      NOT NULL,
     team_color  TEXT  DEFAULT '#ffffff'                      NOT NULL
 );
-    
+
+
 CREATE TABLE IF NOT EXISTS game_revisions (
     player1_id       TEXT      NOT NULL,
     player2_id       TEXT      NOT NULL,
@@ -25,19 +26,20 @@ CREATE TABLE IF NOT EXISTS game_revisions (
 
     FOREIGN KEY (player1_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (author_id)  REFERENCES users(id) ON DELETE RESTRICT,
-    FOREIGN KEY (winner_id)  REFERENCES users(id) ON DELETE RESTRICT
+    FOREIGN KEY (author_id)  REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (winner_id)  REFERENCES users(id) ON DELETE CASCADE
 );
 
 
-CREATE TRIGGER IF NOT EXISTS prevent_game_revision_updates
-BEFORE UPDATE ON game_revisions
-BEGIN
-    SELECT RAISE(ABORT, 'Game revisions cannot be updated');
-END;
+-- CREATE TRIGGER IF NOT EXISTS prevent_game_revision_updates
+-- BEFORE UPDATE ON game_revisions
+-- BEGIN
+--     SELECT RAISE(ABORT, 'Game revisions cannot be updated');
+-- END;
 
-CREATE TRIGGER IF NOT EXISTS prevent_game_revision_deletions
-BEFORE DELETE ON game_revisions
-BEGIN
-    SELECT RAISE(ABORT, 'Game revisions cannot be deleted');
-END;
+
+-- CREATE TRIGGER IF NOT EXISTS prevent_game_revision_deletions
+-- BEFORE DELETE ON game_revisions
+-- BEGIN
+--     SELECT RAISE(ABORT, 'Game revisions cannot be deleted');
+-- END;

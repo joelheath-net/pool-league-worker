@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import { sign } from 'hono/jwt';
 import { googleAuth } from '@hono/oauth-providers/google';
-import { isAuthenticated } from './middleware'; // Assuming you have a middleware to check authentication
+import { isAuthenticated } from './middleware';
 
 const auth = new Hono();
 
@@ -32,6 +32,11 @@ auth.get(
             .first();
 
         if (!user) {
+            const whitelist = (c.env.EMAIL_WHITELIST || '').split(',');
+            if (!whitelist.includes(googleUser.email)) {
+                return c.redirect('/');
+            }
+
             // User doesn't exist, create them
             const newUser = {
                 id: googleUser.id,
@@ -46,11 +51,13 @@ auth.get(
             user = newUser;
         }
 
+        const expires = 60 * 60 * 24 * 7; // 7 days
+
         // Create a JWT payload
         const payload = {
             sub: user.id, // Subject (the user's ID)
             email: user.email,
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7), // Expires in 7 days
+            exp: Math.floor(Date.now() / 1000) + (expires),
         };
 
         // Sign the JWT with our secret
@@ -61,7 +68,7 @@ auth.get(
             path: '/',
             secure: true,
             httpOnly: true,
-            maxAge: 60 * 60 * 24 * 7, // 7 days
+            maxAge: expires,
             sameSite: 'Lax',
         });
 

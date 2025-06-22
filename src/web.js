@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
-import { protectWeb } from './middleware';
-import { isAuthenticated as isAuthentic } from './middleware';
+import { protectWeb, protectAdminWeb, isAuthenticated as isAuthentic, isAdmin as checkAdmin } from './middleware';
 
 import { Layout } from '../views/layout';
 import { LeaderboardPage } from '../views/leaderboard';
@@ -9,19 +8,21 @@ import { GamesPage } from '../views/game-list';
 import { AuditPage } from '../views/audit-log';
 import { CustomizePage } from '../views/customize';
 import { EditGamePage } from '../views/edit-game';
+import { AdminPage } from '../views/admin-panel';
 
 const web = new Hono();
 
 // Use Hono's renderer middleware
 web.use('*', async (c, next) => {
-    c.setRenderer((content, props) => {
+    c.setRenderer(async (content, props) => {
         const title = props.title || 'St Paul\'s League';
         const style = props.style;
         const script = props.script;
         const isAuthenticated = isAuthentic(c);
+        const isAdmin = isAuthenticated && (await checkAdmin(c, true));
 
         return c.html(
-            <Layout {...{ title, style, script, isAuthenticated }}>
+            <Layout {...{ title, style, script, isAuthenticated, isAdmin }}>
                 {content}
             </Layout>
         );
@@ -51,6 +52,10 @@ web.get('/profile', protectWeb, (c) => {
 
 web.get('/edit-game', protectWeb, (c) => {
     return c.render(<EditGamePage />, { title: 'Edit Game', script: '/js/edit-game.js', style: '/css/edit-game.css' });
+});
+
+web.get('/admin-panel', protectAdminWeb, (c) => {
+    return c.render(<AdminPage />, { title: 'Admin Panel', script: '/js/admin-panel.js' });
 });
 
 export default web;

@@ -1,3 +1,5 @@
+const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
+
 function getContrastingTextColor(hexColor) {
     // Remove the hash at the start if it's there
     hexColor = hexColor.replace(/^#/, '');
@@ -20,7 +22,7 @@ function getContrastingTextColor(hexColor) {
 async function initializeEditPage() {
 const pageContent = document.getElementById('page-content');
 const form = document.getElementById('edit-game-form');
-pageContent.insertAdjacentHTML('beforeend', '<p class="loading">Loading game details...</p>');
+pageContent.insertAdjacentHTML('beforeend', html`<p class="loading">Loading game details...</p>`);
 
 try {
     // 1. Get query parameters from the URL
@@ -78,42 +80,40 @@ try {
 
 } catch (error) {
     console.error("Error initializing edit page:", error);
-    pageContent.innerHTML = `<p class="error">Could not load game details. ${error.message}</p>`;
+    pageContent.innerHTML = html`<p class="error">Could not load game details. ${error.message}</p>`;
 }
 }
 
 // Handle the form submission
 document.getElementById('edit-game-form').addEventListener('submit', async function(event) {
-event.preventDefault();
+    event.preventDefault();
 
-const formData = new FormData(event.target);
-// Convert form data to a plain object
-const updates = Object.fromEntries(formData.entries());
-// Convert checkbox value from "on" to a boolean
-updates.fouled_on_black = document.getElementById('fouled-on-black').checked;
+    const formData = new FormData(event.target);
+    // Convert form data to a plain object
+    const updates = Object.fromEntries(formData.entries());
+    // Convert checkbox value from "on" to a boolean
+    updates.fouled_on_black = document.getElementById('fouled-on-black').checked;
 
-// Add IDs to updates BEFORE sending the PATCH request
-const params = new URLSearchParams(window.location.search);
-updates.player1_id = params.get('player1_id');
-updates.player2_id = params.get('player2_id');
-updates.rematch_id = params.get('rematch_id');
+    // Add IDs to updates BEFORE sending the PATCH request
+    const params = new URLSearchParams(window.location.search);
+    updates.player1_id = params.get('player1_id');
+    updates.player2_id = params.get('player2_id');
+    updates.rematch_id = params.get('rematch_id');
 
-try {
-    const response = await fetch('/api/game', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-    });
+    try {
+        const response = await fetch('/api/game', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+        });
 
-    if (!response.ok) throw new Error('Failed to save changes.');
+        if (!response.ok) throw new Error('Failed to save changes.');
 
-    alert('Game updated successfully! Redirecting to the game list.');
-    // In a real app, this would be the path to your games list page
-    window.location.href = '/game-list'; 
-} catch (error) {
-    console.error("Error saving game:", error);
-    alert("An error occurred while saving. Please try again.");
-}
+        window.location.href = '/game-list'; 
+    } catch (error) {
+        console.error("Error saving game:", error);
+        alert("An error occurred while saving. Please try again.");
+    }
 });
 
 document.addEventListener('DOMContentLoaded', initializeEditPage);

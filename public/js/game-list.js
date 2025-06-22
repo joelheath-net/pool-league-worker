@@ -1,3 +1,5 @@
+const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
+
 function getContrastingTextColor(hexColor) {
     // Remove the hash at the start if it's there
     hexColor = hexColor.replace(/^#/, '');
@@ -40,7 +42,7 @@ async function populateGameList() {
         const userMap = new Map(users.map(user => [user.id, user]));
 
         if (games.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No games have been logged yet.</td></tr>';
+                tableBody.innerHTML = html`<tr><td colspan="7" style="text-align: center;"><div class="table-cell">No games have been logged yet.</div></td></tr>`;
                 return;
         }
 
@@ -72,7 +74,7 @@ async function populateGameList() {
             const winnerColor = getContrastingTextColor(winnerInfo.team_color);            
             const loserColor = getContrastingTextColor(loserInfo.team_color);
 
-            const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
+            
 
             return html`
                 <tr>

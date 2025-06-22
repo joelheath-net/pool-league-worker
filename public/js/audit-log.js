@@ -1,3 +1,5 @@
+const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
+
 /**
  * Fetches all revisions and users, then populates the audit log.
  */
@@ -20,7 +22,7 @@ async function populateAuditLog() {
         const userMap = new Map(users.map(user => [user.id, user]));
 
         if (auditLog.length === 0) {
-            container.innerHTML = '<p class="loading">No game revisions found.</p>';
+            container.innerHTML = html`<p class="loading">No games found.</p>`;
             return;
         }
 
@@ -41,7 +43,7 @@ async function populateAuditLog() {
             const rematchText = rev.rematch_id === 0 ? 'First Match' : `Rematch ${rev.rematch_id}`;
             const fouledText = rev.fouled_on_black ? 'Yes' : 'No';
 
-            return `
+            return html`
                 <div class="audit-entry">
                     <div class="audit-entry-header">
                         <h3>${actionText}</h3>
@@ -65,7 +67,7 @@ async function populateAuditLog() {
 
     } catch (error) {
         console.error("Error populating audit log:", error);
-        container.innerHTML = `<p class="error">Failed to load audit log. ${error.message}</p>`;
+        container.innerHTML = html`<p class="error">Failed to load audit log. ${error.message}</p>`;
     }
 }
 

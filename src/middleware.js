@@ -14,21 +14,51 @@ export const isAuthenticated = (c) => {
     } catch (error) {
         return false; // Token is invalid or expired
     }
-}; 
+};
+
+// Do not set isAuthentic to true unless you are sure the user is authenticated
+export const isAdmin = async (c, isAuthentic = false) => {
+    if (!isAuthentic && !isAuthenticated(c))
+        return false;
+
+    const userPayload = await c.get('user');
+    const data = await c.env.DB.prepare('SELECT role FROM users WHERE id = ?')
+        .bind(userPayload.sub)
+        .first();
+    return data && data.role === 'admin';
+}
 
 // This middleware will be used to protect our API and web routes
 export const protectAPI = async (c, next) => {
-    if (isAuthenticated(c)) {
+    if (isAuthenticated(c))
         await next();
+    else
+        return c.json({ message: 'Invalid token' }, 401);
+};
+
+export const protectWeb = async (c, next) => {
+    if (isAuthenticated(c))
+        await next();
+    else
+        return c.redirect('/');
+};
+
+export const protectAdminAPI = async (c, next) => {
+    if (isAuthenticated(c)) {
+        if (await isAdmin(c, true)) {
+            await next();
+        } else {
+            return c.json({ message: 'Access denied' }, 403);
+        }
     } else {
         return c.json({ message: 'Invalid token' }, 401);
     }
 };
 
-export const protectWeb = async (c, next) => {
-    if (isAuthenticated(c)) {
+
+export const protectAdminWeb = async (c, next) => {
+    if (await isAdmin(c))
         await next();
-    } else {
+    else
         return c.redirect('/');
-    }
 };

@@ -12,11 +12,13 @@ import { Hono } from 'hono';
 import authRoutes from './auth';
 import apiRoutes from './api';
 import webRoutes from './web';
+import adminRoutes from './admin';
 
 const app = new Hono();
 
 app.route('/auth', authRoutes);
 app.route('/api', apiRoutes);
+app.route('/admin', adminRoutes);
 app.route('/', webRoutes);
 
 export default app;

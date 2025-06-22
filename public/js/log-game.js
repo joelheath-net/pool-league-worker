@@ -1,3 +1,5 @@
+const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
+
 function getContrastingTextColor(hexColor) {
     // Remove the hash at the start if it's there
     hexColor = hexColor.replace(/^#/, '');
@@ -45,8 +47,8 @@ async function populatePlayerDropdowns() {
 
     } catch (error) {
         console.error("Error populating player dropdowns:", error);
-        winnerSelect.innerHTML = '<option value="">Error loading players</option>';
-        loserSelect.innerHTML = '<option value="">Error loading players</option>';
+        winnerSelect.innerHTML = html`<option value="">Error loading players</option>`;
+        loserSelect.innerHTML = html`<option value="">Error loading players</option>`;
     }
 }
 
