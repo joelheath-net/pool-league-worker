@@ -17,7 +17,7 @@ export const GamesPage = () => {
                     </thead>
                     <tbody id="games-list-body">
                         <tr>
-                            <td colspan="7" style="text-align: center;">Loading game history...</td>
+                            <div class="table-cell"><td colspan="7" style="text-align: center;">Loading game history...</td></div>
                         </tr>
                     </tbody>
                 </table>

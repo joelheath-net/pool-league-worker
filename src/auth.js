@@ -32,8 +32,8 @@ auth.get(
             .first();
 
         if (!user) {
-            const whitelist = (c.env.EMAIL_WHITELIST || '').split(',');
-            if (!whitelist.includes(googleUser.email)) {
+            const whitelist = (c.env.EMAIL_WHITELIST || '');
+            if (whitelist && !whitelist.split(',').includes(googleUser.email)) {
                 return c.redirect('/');
             }
 
