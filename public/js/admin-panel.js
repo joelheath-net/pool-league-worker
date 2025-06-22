@@ -1,3 +1,5 @@
+const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
+
 function getContrastingTextColor(hexColor) {
     // Remove the hash at the start if it's there
     hexColor = hexColor.replace(/^#/, '');
@@ -44,67 +46,99 @@ async function populatePlayerDropdowns() {
     }
 }
 
-
-const resetDbButton = document.querySelector('#reset-db-button');
-if (resetDbButton) {
-    resetDbButton.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to reset the database? This action cannot be undone.')) {
-            try {
-                const response = await fetch('/admin/reset-db', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to reset the database');
-                }
-
-                alert('Database has been reset successfully.');
-                window.location.reload();
-            } catch (error) {
-                console.error('Error resetting database:', error);
-                alert('An error occurred while resetting the database. Please try again later.');
-            }
-        }
-    });
-}
-
-const deletePlayerButton = document.querySelector('#delete-player-button');
-if (deletePlayerButton) {
-    deletePlayerButton.addEventListener('click', async () => {
-        const playerOption = document.querySelector('#player').selectedOptions[0];
-        const name = playerOption.textContent;
-        const id = playerOption.value;
-
-        if (!name)
-            return alert('Please select a player to delete.');
-
-        if (confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
-            try {
-                const response = await fetch(`/admin/delete-user/${id}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to delete ${name} the database`);
-                }
-
-                alert(`Player ${name} has been deleted successfully.`);
-                window.location.reload();
-            } catch (error) {
-                console.error(`Error deleting player ${name}:`, error);
-                alert(`An error occurred while deleting ${name}. Please try again later`);
-            }
-        }
-    });
-}
-
-//dom
 document.addEventListener('DOMContentLoaded', () => {
     populatePlayerDropdowns();
+    
+    const resetDbButton = document.querySelector('#reset-db-button');
+    if (resetDbButton) {
+        resetDbButton.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to reset the database? This action cannot be undone.')) {
+                try {
+                    const response = await fetch('/admin/reset-db', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to reset the database');
+                    }
+
+                    alert('Database has been reset successfully.');
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Error resetting database:', error);
+                    alert('An error occurred while resetting the database. Please try again later.');
+                }
+            }
+        });
+    }
+
+    const deletePlayerButton = document.querySelector('#delete-player-button');
+    if (deletePlayerButton) {
+        deletePlayerButton.addEventListener('click', async () => {
+            const playerOption = document.querySelector('#player').selectedOptions[0];
+            const name = playerOption.textContent;
+            const id = playerOption.value;
+
+            if (!id)
+                return alert('Please select a player to delete.');
+
+            if (confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+                try {
+                    const response = await fetch(`/admin/delete-user/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to delete ${name} from the database`);
+                    }
+
+                    alert(`Player ${name} has been deleted successfully.`);
+                    window.location.reload();
+                } catch (error) {
+                    console.error(`Error deleting player ${name}:`, error);
+                    alert(`An error occurred while deleting ${name}. Please try again later`);
+                }
+            }
+        });
+    }
+
+    const importGamesButton = document.querySelector('#import-games-button');
+    if (importGamesButton) {
+        importGamesButton.addEventListener('click', async () => {
+            const tsvData = document.getElementById('import-data-textarea').value;
+            if (!tsvData.trim()) {
+                return alert('Please paste data into the text box.');
+            }
+
+            if (confirm('Are you sure you want to import these games? This will create new game revisions.')) {
+                try {
+                    const response = await fetch('/admin/import-games', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain',
+                        },
+                        body: tsvData,
+                    });
+                    
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Failed to import games.');
+                    }
+
+                    alert(`Successfully imported ${result.importedCount} games.`);
+                    document.getElementById('import-data-textarea').value = ''; // Clear the text area
+                } catch (error) {
+                    console.error('Error importing games:', error);
+                    alert(`An error occurred while importing games: ${error.message}`);
+                }
+            }
+        });
+    }
 });

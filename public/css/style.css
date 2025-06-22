@@ -105,7 +105,7 @@ label {
     color: #555;
 }
 
-select, button, input[type="number"], input[type="date"], input[type="text"], input[type="color"] {
+select, button, input[type="number"], input[type="date"], input[type="text"], input[type="color"], textarea {
     width: 100%;
     padding: 10px;
     border-radius: 4px;

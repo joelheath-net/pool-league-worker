@@ -22,7 +22,7 @@ function getContrastingTextColor(hexColor) {
 async function initializeEditPage() {
 const pageContent = document.getElementById('page-content');
 const form = document.getElementById('edit-game-form');
-pageContent.insertAdjacentHTML('beforeend', html`<p class="loading">Loading game details...</p>`);
+const matchup_title = document.getElementById('matchup-title')
 
 try {
     // 1. Get query parameters from the URL
@@ -54,7 +54,7 @@ try {
     
     // 3. Populate form fields with the game data
     const rematchText = game.rematch_id === 0 ? 'First Match' : `Rematch ${game.rematch_id}`;
-    document.getElementById('matchup-title').textContent = `${player1.name} vs. ${player2.name} (${rematchText})`;
+    matchup_title.textContent = `${player1.name} vs. ${player2.name} (${rematchText})`;
     
     const winnerSelect = document.getElementById('winner');
     // Populate winner dropdown with only the two players in this match
@@ -74,8 +74,6 @@ try {
     // Format the date to YYYY-MM-DD for the input field
     document.getElementById('game-date').value = new Date(game.played_at).toISOString().split('T')[0];
 
-    // Remove loading message and show the form
-    pageContent.querySelector('.loading').remove();
     form.style.display = 'block';
 
 } catch (error) {

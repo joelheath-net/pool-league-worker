@@ -2,7 +2,7 @@ export const EditGamePage = () => {
     return (
         <div id="page-content" class="container centre-container">
             <h1 class="centre-title">Edit Game</h1>
-            <h2 id="matchup-title" class="centre-title"></h2>
+            <h2 id="matchup-title" class="centre-title">Loading match details...</h2>
 
             <form id="edit-game-form" style="display: none;">
                 <div class="form-group">
