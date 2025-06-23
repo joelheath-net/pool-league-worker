@@ -1,4 +1,4 @@
-import { getCookie } from 'hono/cookie';
+import { getCookie, setCookie } from 'hono/cookie';
 import { verify, decode } from 'hono/jwt';
 import { performTokenRefresh } from './token-service.js';
 import * as db from './database.js';
@@ -34,7 +34,8 @@ export const authContextMiddleware = async (c, next) => {
             const { payload } = decode(token);
             const userId = payload?.sub;
             if (userId) {
-                const newToken = await performTokenRefresh(c, userId);
+                const { message: refreshStatus, jwt: newToken } = await performTokenRefresh(c, userId);
+                
                 if (newToken) {
                     // If refresh worked, the new token is in the cookie. We need to verify it to set the context for the current request.
                     const newPayload = await verify(newToken, c.env.JWT_SECRET);
@@ -45,6 +46,8 @@ export const authContextMiddleware = async (c, next) => {
                         c.set('isAdmin', true);
                     }
                     console.log('[MIDDLEWARE] Token refreshed successfully.');
+                } else if (refreshStatus === 'NO_REFRESH_TOKEN') {
+                    setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 5 }); // Expires in 5 minutes
                 }
             }
         }
@@ -66,7 +69,7 @@ export const protectWeb = async (c, next) => {
 };
 
 export const protectAdminWeb = async (c, next) => {
-    if (await c.get('isAuthenticated') && c.get('isAdmin')) {
+    if (await c.get('isAuthenticated') && await c.get('isAdmin')) {
         await next();
     } else {
         return c.redirect('/');

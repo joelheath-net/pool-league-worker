@@ -2,26 +2,20 @@ import { setCookie } from 'hono/cookie';
 import { sign } from 'hono/jwt';
 import { getUserForRefresh, updateUserTokens } from './database.js';
 
-export const accessTokenExpiresIn = 10; //60 * 15; // 15 minutes
-export const refreshTokenExpiresIn = 60 * 60 * 24 * 30; // 30 days
+export const accessTokenExpiresIn = 60 * 15; // 15 minutes
+export const refreshTokenExpiresIn = 60 * 60 * 24 * 90; // 90 days
 
-/**
- * Performs a token refresh using a user's Google refresh token.
- * @param {import('hono').Context} c - The Hono context.
- * @param {string} userId - The ID of the user whose token needs refreshing.
- * @returns {Promise<boolean>} - True if refresh was successful, false otherwise.
- */
 export const performTokenRefresh = async (c, userId) => {
     if (!userId) {
         console.error('[TOKEN-SERVICE] Refresh failed: No userId provided.');
-        return false;
+        return 'FAILED';
     }
 
     const user = await getUserForRefresh(c.env.DB, userId);
 
     if (!user || !user.google_refresh_token) {
         console.error(`[TOKEN-SERVICE] Refresh failed: No refresh token found in DB for user ${userId}.`);
-        return false;
+        return { message: 'NO_REFRESH_TOKEN', jwt: null };
     }
 
     try {
@@ -40,7 +34,7 @@ export const performTokenRefresh = async (c, userId) => {
 
         if (!tokenResponse.ok) {
             console.error(`[TOKEN-SERVICE] Refresh failed: Google API returned an error for user ${userId}.`, tokenData);
-            return false;
+            return { message: 'GOOGLE_API_ERROR', jwt: null };
         }
 
         await updateUserTokens(c.env.DB, userId, {
@@ -62,13 +56,13 @@ export const performTokenRefresh = async (c, userId) => {
             maxAge: refreshTokenExpiresIn,
             sameSite: 'Lax',
         });
-        
+
         console.log(`[TOKEN-SERVICE] Refresh successful for user ${userId}. New JWT issued.`);
 
-        return newJwt; // Success!
+        return { message: 'REFRESH_SUCCESS', jwt: newJwt };
 
     } catch (error) {
         console.error(`[TOKEN-SERVICE] Refresh failed: An unexpected error occurred for user ${userId}.`, error);
-        return null;
+        return { message: 'UNEXPECTED_ERROR', jwt: null };
     }
 };

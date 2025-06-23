@@ -19,7 +19,12 @@ auth.get('/google/login', (c) => {
     googleAuthUrl.searchParams.set('response_type', 'code');
     googleAuthUrl.searchParams.set('scope', 'openid profile email');
     googleAuthUrl.searchParams.set('access_type', 'offline');
-    // googleAuthUrl.searchParams.set('prompt', 'consent');
+    
+    const reconsentNeeded = getCookie(c, 'reconsent_needed');
+    if (reconsentNeeded) {
+        googleAuthUrl.searchParams.set('prompt', 'consent');
+        deleteCookie(c, 'reconsent_needed', { path: '/' });
+    }
 
     return c.redirect(googleAuthUrl.toString());
 });
