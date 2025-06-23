@@ -16,11 +16,11 @@ export const userExists = async (db, id) => {
 }
 
 export const getUserById = async (db, id) => {
-    return await db.prepare('SELECT id, name, team, team_color, role FROM users WHERE id = ?').bind(id).first();
+    return await db.prepare('SELECT id, name, team, team_color FROM users WHERE id = ?').bind(id).first();
 };
 
 export const getSensitiveUserById = async (db, id) => {
-    return await db.prepare('SELECT id, name, email FROM users WHERE id = ?').bind(id).first();
+    return await db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').bind(id).first();
 };
 
 export const getProfile = async (db, userId) => {
@@ -76,9 +76,9 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
     return user;
 };
 
-
+// VERY SENSITIVE, DO NOT EXPOSE REFRESH TOKEN
 export const getUserForRefresh = async (db, userId) => {
-    return await db.prepare('SELECT id, email, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
+    return await db.prepare('SELECT id, email, role, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
 };
 
 export const updateUserTokens = async (db, userId, { access_token, expires_in }) => {

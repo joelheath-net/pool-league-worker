@@ -70,6 +70,7 @@ auth.get('/google/callback', async (c) => {
         const payload = {
             sub: user.id,
             email: user.email,
+            role: user.role,
             exp: Math.floor(Date.now() / 1000) + accessTokenExpiresIn,
         };
         const jwt = await sign(payload, c.env.JWT_SECRET);

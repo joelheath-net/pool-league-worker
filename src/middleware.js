@@ -23,10 +23,7 @@ export const authContextMiddleware = async (c, next) => {
         const payload = await verify(token, c.env.JWT_SECRET);
         c.set('user', payload);
         c.set('isAuthenticated', true);
-        const user = await db.getUserById(c.env.DB, payload.sub);
-        if (user && user.role === 'admin') {
-            c.set('isAdmin', true);
-        }
+        c.set('isAdmin', payload.role === 'admin');
     } catch (error) {
         // If token is expired, try to refresh it
         if (error.name === 'JwtTokenExpired') {
@@ -41,10 +38,7 @@ export const authContextMiddleware = async (c, next) => {
                     const newPayload = await verify(newToken, c.env.JWT_SECRET);
                     c.set('user', newPayload);
                     c.set('isAuthenticated', true);
-                    const user = await db.getUserById(c.env.DB, newPayload.sub);
-                    if (user && user.role === 'admin') {
-                        c.set('isAdmin', true);
-                    }
+                    c.set('isAdmin', newPayload.role === 'admin');
                     console.log('[MIDDLEWARE] Token refreshed successfully.');
                 } else if (refreshStatus === 'NO_REFRESH_TOKEN') {
                     setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 5 }); // Expires in 5 minutes

@@ -45,6 +45,7 @@ export const performTokenRefresh = async (c, userId) => {
         const newPayload = {
             sub: userId,
             email: user.email,
+            role: user.role,
             exp: Math.floor(Date.now() / 1000) + accessTokenExpiresIn,
         };
         const newJwt = await sign(newPayload, c.env.JWT_SECRET);
