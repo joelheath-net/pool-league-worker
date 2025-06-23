@@ -1,47 +1,24 @@
 import { Hono } from 'hono';
 import { protectAdminAPI } from './middleware.js';
+import * as db from './database.js';
 
 const admin = new Hono();
 
-admin.post('/reset-db', protectAdminAPI, async (c) => {
-    
-    /*
-    await c.env.DB.prepare('DROP TABLE IF EXISTS game_revisions').run();
-    // await c.env.DB.prepare('DROP TABLE IF EXISTS users').run();
-    
+admin.use('*', protectAdminAPI);
 
-    const statements = c.env.SETUP_SQL.split('\r\n\r\n\r\n')
-        .map(statement => statement.split('\r\n')
-            .map(line => line.trim().replace('\r', '').replace('\n', ''))
-            // replace multiple spaces with single space
-            .map(line => line.replace(/\s+/g, ' '))
-            .filter(line => line.length > 0 && !line.startsWith('--'))
-            .reduce((acc, line) => acc + ' ' + line, '')
-            .trim()
-        ).map(sql => c.env.DB.prepare(sql));
-
-    const results = await c.env.DB.batch(statements);
-    */
-
-    // Delete all from game_revisions
-    const results = await c.env.DB.prepare('DELETE FROM game_revisions').run();
-
-    return new Response("Database setup complete!\n" + JSON.stringify(results, null, 2), {
-    headers: { "Content-Type": "application/json" },
-    status: 200,
-    });
+admin.post('/reset-db', async (c) => {
+    const results = await db.resetGames(c.env.DB);
+    return c.json({ message: "All game records have been deleted.", ...results });
 });
 
-admin.post('/delete-user/:id', protectAdminAPI, async (c) => {
+admin.post('/delete-user/:id', async (c) => {
     const id = c.req.param('id');
-    if (!id) {
-        return c.json({ error: 'User ID is required' }, 400);
-    }
+    if (!id) return c.json({ error: 'User ID is required' }, 400);
     try {
-        const result = await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
-        if (result.changes === 0) {
+        const result = await db.deleteUser(c.env.DB, id);
+        if (result.changes === 0)
             return c.json({ error: 'User not found' }, 404);
-        }
+
         return c.json({ message: 'User deleted successfully' }, 200);
     } catch (error) {
         console.error('Error deleting user:', error);
@@ -49,7 +26,7 @@ admin.post('/delete-user/:id', protectAdminAPI, async (c) => {
     }
 });
 
-admin.post('/import-games', protectAdminAPI, async (c) => {
+admin.post('/import-games', async (c) => {
     const tsvData = await c.req.text();
     const userPayload = await c.get('user');
     const author_id = userPayload.sub;
@@ -107,38 +84,8 @@ admin.post('/import-games', protectAdminAPI, async (c) => {
     }
     
     try {
-        const statements = await Promise.all(gamesToProcess.map(async (game) => {
-            const latestRevision = await c.env.DB.prepare(
-                `SELECT revision_id FROM game_revisions
-                 WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-                 ORDER BY revision_id DESC LIMIT 1`
-            ).bind(game.player1_id, game.player2_id, game.rematch_id).first();
-
-            const newRevisionId = latestRevision ? latestRevision.revision_id + 1 : 0;
-            
-            return c.env.DB.prepare(
-                `INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).bind(
-                newRevisionId,
-                game.player1_id,
-                game.player2_id,
-                game.rematch_id,
-                game.winner_id,
-                game.balls_remaining,
-                game.fouled_on_black,
-                game.played_at,
-                game.author_id,
-                game.authored_at
-            );
-        }));
-
-        if (statements.length > 0) {
-            await c.env.DB.batch(statements);
-        }
-
-        return c.json({ importedCount: statements.length });
-
+        const importedCount = await db.importGames(c.env.DB, gamesToProcess);
+        return c.json({ importedCount });
     } catch (error) {
         console.error('Error importing games:', error);
         return c.json({ error: 'Failed to import games. Check data for errors or duplicates.' }, 500);

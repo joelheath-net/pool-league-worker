@@ -105,12 +105,15 @@ document.getElementById('edit-game-form').addEventListener('submit', async funct
             body: JSON.stringify(updates),
         });
 
-        if (!response.ok) throw new Error('Failed to save changes.');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update game.');
+        }
 
         window.location.href = '/game-list'; 
     } catch (error) {
         console.error("Error saving game:", error);
-        alert("An error occurred while saving. Please try again.");
+        alert("An error occurred while saving. Please try again. \n" + error.message);
     }
 });
 

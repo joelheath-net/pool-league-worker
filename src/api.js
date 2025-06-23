@@ -1,186 +1,130 @@
 import { Hono } from 'hono';
 import { protectAPI } from './middleware.js';
+import * as db from './database.js';
 
 const api = new Hono();
 
+// --- UTILITY ---
+function validateFields(fields, data) {
+    for (const field of fields) {
+        if (!data.hasOwnProperty(field)) {
+            return { valid: false, message: `Missing required field: ${field}` };
+        }
+    }
+    return { valid: true };
+}
+
 // --- PUBLIC ROUTES ---
 
-// Get a specific user by ID
 api.get('/users/:id', async (c) => {
     const { id } = c.req.param();
-    const user = await c.env.DB.prepare('SELECT id, name, team, team_color FROM users WHERE id = ?').bind(id).first();
+    const user = await db.getUserById(c.env.DB, id);
     if (!user) return c.json({ message: 'User not found' }, 404);
     return c.json(user);
 });
 
-// Get all users
 api.get('/users', async (c) => {
-    const { results } = await c.env.DB.prepare('SELECT id, name, team, team_color FROM users').all();
-    return c.json(results);
+    const users = await db.getUsers(c.env.DB);
+    return c.json(users);
 });
 
-// Get leaderboard stats
 api.get('/leaderboard', async (c) => {
-    const { results: games } = await c.env.DB.prepare(`
-        WITH RankedRevisions AS (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY player1_id, player2_id, rematch_id ORDER BY revision_id DESC) as rn
-            FROM game_revisions
-        )
-        SELECT * FROM RankedRevisions WHERE rn = 1
-    `).all();
-
-    const { results: players } = await c.env.DB.prepare('SELECT id FROM users').all();
-    const playerMap = new Map(players.map(p => [p.id, { wins: 0, losses: 0, balls_remaining: 0, fouls_on_black: 0 }]));
-
-    for (const game of games) {
-        const { player1_id, player2_id, winner_id, balls_remaining, fouled_on_black } = game;
-        const winner = winner_id === player1_id ? player1_id : player2_id;
-        const loser = winner_id === player1_id ? player2_id : player1_id;
-
-        if (playerMap.has(winner)) playerMap.get(winner).wins++;
-        if (playerMap.has(loser)) {
-            playerMap.get(loser).losses++;
-            playerMap.get(loser).balls_remaining += balls_remaining;
-            if (fouled_on_black) playerMap.get(loser).fouls_on_black++;
-        }
-    }
-    return c.json(Array.from(playerMap.entries()).map(([playerId, stats]) => ({ playerId, ...stats })));
+    const stats = await db.getLeaderboardStats(c.env.DB);
+    return c.json(stats);
 });
-
 
 // --- AUTHENTICATED ROUTES ---
 
 api.get('/users-sensitive', protectAPI, async (c) => {
-    const { results } = await c.env.DB.prepare('SELECT id, name, email FROM users').all();
-    return c.json(results);
+    const users = await db.getSensitiveUsers(c.env.DB);
+    return c.json(users);
 });
 
-// Get the current user's profile
 api.get('/profile', protectAPI, async (c) => {
     const userPayload = await c.get('user');
-
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userPayload.sub).first();
+    const user = await db.getProfile(c.env.DB, userPayload.sub);
     return c.json(user);
 });
 
-// Update the current user's profile
 api.patch('/profile', protectAPI, async (c) => {
     const userPayload = await c.get('user');
-    const { name, team, team_color } = await c.req.json();
+    const profileData = await c.req.json();
 
-    // Here is where we add the application-level validation for the color
-    if (!/^#[0-9a-fA-F]{6}$/.test(team_color)) {
-        return c.json({ message: 'Invalid team color format. Use hex color codes like #RRGGBB' }, 400);
+    // Application-level validation remains in the API layer
+    if (!/^#[0-9a-fA-F]{6}$/.test(profileData.team_color)) {
+        return c.json({ message: 'Invalid team color format. Must be hex color codes in format #RRGGBB' }, 400);
     }
 
-    await c.env.DB.prepare('UPDATE users SET name = ?, team = ?, team_color = ? WHERE id = ?')
-        .bind(name, team, team_color, userPayload.sub)
-        .run();
+    await db.updateProfile(c.env.DB, userPayload.sub, profileData);
     return c.json({ message: 'Profile updated successfully' });
 });
 
-// Log a new game
 api.post('/log-game', protectAPI, async (c) => {
     const userPayload = await c.get('user');
-    const { winner, loser, balls_remaining, fouled_on_black, date } = await c.req.json();
+    const gameData = await c.req.json();
+    
+    // Input validation
+    if (!gameData || typeof gameData !== 'object') return c.json({ message: 'Invalid game data format' }, 400);
+    
+    const requiredFields = ['winner', 'loser', 'balls_remaining', 'fouled_on_black', 'date'];
+    const validation = validateFields(requiredFields, gameData);
+    if (!validation.valid) return c.json({ message: validation.message }, 400);
+    
+    if (gameData.winner === gameData.loser) return c.json({ message: 'Winner and loser cannot be the same' }, 400);
+    if (!db.userExists(c.env.DB, gameData.winner)) return c.json({ message: 'Winner does not exist' }, 404);
+    if (!db.userExists(c.env.DB, gameData.loser)) return c.json({ message: 'Loser does not exist' }, 404);
 
-    const player1_id = winner < loser ? winner : loser;
-    const player2_id = winner < loser ? loser : winner;
+    // Add author from the authenticated user context
+    gameData.author_id = userPayload.sub;
 
-    const latestRematch = await c.env.DB.prepare(
-        `SELECT rematch_id FROM game_revisions WHERE player1_id = ? AND player2_id = ? ORDER BY rematch_id DESC LIMIT 1`
-    ).bind(player1_id, player2_id).first();
-    const rematch_id = latestRematch ? latestRematch.rematch_id + 1 : 0;
-
-    await c.env.DB.prepare(
-        `INSERT INTO game_revisions (player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(player1_id, player2_id, rematch_id, winner, balls_remaining, fouled_on_black, date, userPayload.sub, new Date().toISOString()).run();
-
+    await db.createGameRevision(c.env.DB, gameData);
     return c.json({ message: 'Game logged successfully' }, 201);
 });
 
-// Get a list of all games (latest revisions)
 api.get('/game-list', protectAPI, async (c) => {
-     const { results } = await c.env.DB.prepare(`
-        WITH RankedRevisions AS (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY player1_id, player2_id, rematch_id ORDER BY revision_id DESC) as rn
-            FROM game_revisions
-        )
-        SELECT * FROM RankedRevisions WHERE rn = 1 ORDER BY played_at DESC, player1_id, player2_id, rematch_id DESC
-    `).all();
-    return c.json(results);
+    const games = await db.getGameList(c.env.DB);
+    return c.json(games);
 });
 
-// Get all revisions for the audit log
 api.get('/audit-log', protectAPI, async (c) => {
-    const { results } = await c.env.DB.prepare('SELECT * FROM game_revisions ORDER BY authored_at DESC').all();
-    return c.json(results);
+    const revisions = await db.getAuditLog(c.env.DB);
+    return c.json(revisions);
 });
 
-// (Add any other API routes like patchGame or getGameByIds here following the same pattern)
-
-// Add these two new routes inside src/api.js, after the '/audit-log' route
-
-// Get a specific game's latest revision by its composite ID
 api.get('/games/:player1Id/:player2Id/:rematchId', protectAPI, async (c) => {
     let { player1Id, player2Id, rematchId } = c.req.param();
+    if (player1Id > player2Id) [player1Id, player2Id] = [player2Id, player1Id];
 
-    // Ensure player1Id is always the smaller one, matching the model's logic
-    if (player1Id > player2Id) {
-        [player1Id, player2Id] = [player2Id, player1Id];
-    }
-
-    const game = await c.env.DB.prepare(
-      `SELECT * FROM game_revisions
-       WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-       ORDER BY revision_id DESC
-       LIMIT 1`
-    ).bind(player1Id, player2Id, rematchId).first();
-
-    if (!game) {
-        return c.json({ message: 'Game not found' }, 404);
-    }
+    const game = await db.getGameByCompositeId(c.env.DB, player1Id, player2Id, rematchId);
+    if (!game) return c.json({ message: 'Game not found' }, 404);
     return c.json(game);
 });
 
-// Update a game by creating a new revision
 api.patch('/game', protectAPI, async (c) => {
     const userPayload = await c.get('user');
-    const { player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at } = await c.req.json();
+    const gameData = await c.req.json();
 
-    // First, find the latest revision for this game to ensure it exists
-    const latestRevision = await c.env.DB.prepare(
-        `SELECT revision_id FROM game_revisions
-         WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-         ORDER BY revision_id DESC LIMIT 1`
-    ).bind(player1_id, player2_id, rematch_id).first();
+    // Input validation
+    if (!gameData || typeof gameData !== 'object') return c.json({ message: 'Invalid game data format' }, 400);
 
-    if (!latestRevision) {
-        return c.json({ message: 'Cannot update a game that does not exist.' }, 404);
-    }
+    const requiredFields = ['player1_id', 'player2_id', 'rematch_id', 'winner_id', 'balls_remaining', 'fouled_on_black', 'played_at'];
+    const validation = validateFields(requiredFields, gameData);
+    if (!validation.valid) return c.json({ message: validation.message }, 400);
 
-    // Create a new revision by incrementing the last one
-    const newRevisionId = latestRevision.revision_id + 1;
-
-    await c.env.DB.prepare(
-        `INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-        newRevisionId,
-        player1_id,
-        player2_id,
-        rematch_id,
-        winner_id,
-        balls_remaining,
-        fouled_on_black,
-        played_at,
-        userPayload.sub, // The author is the currently logged-in user
-        new Date().toISOString()
-    ).run();
+    if (gameData.player1_id === gameData.player2_id) return c.json({ message: 'Winner and loser cannot be the same' }, 400);
     
-    return c.json({ message: 'Game updated successfully by creating a new revision.' });
-});
+    gameData.author_id = userPayload.sub;
 
+    try {
+        await db.updateGame(c.env.DB, gameData);
+        return c.json({ message: 'Game updated successfully by creating a new revision.' }, 200);
+    } catch (error) {
+        if (error.message.includes('does not exist')) {
+            return c.json({ message: error.message }, 404);
+        }
+        console.error('Error updating game:', error);
+        return c.json({ message: 'An internal error occurred.' }, 500);
+    }
+});
 
 export default api;
