@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { protectWeb, protectAdminWeb, isAuthenticated as isAuthentic, isAdmin as checkAdmin } from './middleware';
+import { authContextMiddleware, protectWeb, protectAdminWeb } from './middleware';
 
 import { Layout } from '../views/layout';
 import { LeaderboardPage } from '../views/leaderboard';
@@ -12,14 +12,15 @@ import { AdminPage } from '../views/admin-panel';
 
 const web = new Hono();
 
-// Use Hono's renderer middleware
+// This middleware sets up the renderer, which can now depend on the auth context.
 web.use('*', async (c, next) => {
     c.setRenderer(async (content, props) => {
-        const title = props.title || 'St Paul\'s League';
+        const title = props.title || "St Paul's League";
         const style = props.style;
         const script = props.script;
-        const isAuthenticated = isAuthentic(c);
-        const isAdmin = isAuthenticated && (await checkAdmin(c, true));
+        const isAuthenticated = c.get('isAuthenticated');
+        const isAdmin = c.get('isAdmin');
+
 
         return c.html(
             <Layout {...{ title, style, script, isAuthenticated, isAdmin }}>
@@ -30,10 +31,14 @@ web.use('*', async (c, next) => {
     await next();
 });
 
+// --- Routes ---
+
+// Public route
 web.get('/', (c) => {
     return c.render(<LeaderboardPage />, { title: `St Paul's League`, script: '/js/leaderboard.js' });
 });
 
+// Protected routes
 web.get('/log-game', protectWeb, (c) => {
     return c.render(<LogGamePage />, { title: 'Log a Game', script: '/js/log-game.js' });
 });
@@ -54,6 +59,7 @@ web.get('/edit-game', protectWeb, (c) => {
     return c.render(<EditGamePage />, { title: 'Edit Game', script: '/js/edit-game.js', style: '/css/edit-game.css' });
 });
 
+// Admin-only route
 web.get('/admin-panel', protectAdminWeb, (c) => {
     return c.render(<AdminPage />, { title: 'Admin Panel', script: '/js/admin-panel.js' });
 });

@@ -9,16 +9,24 @@
  */
 
 import { Hono } from 'hono';
+import { authContextMiddleware } from './middleware';
 import authRoutes from './auth';
 import apiRoutes from './api';
 import webRoutes from './web';
 import adminRoutes from './admin';
 
+const authenticatedApp = new Hono();
+
+authenticatedApp.use('*', authContextMiddleware);
+
+authenticatedApp.route('/', webRoutes);
+authenticatedApp.route('/api', apiRoutes);
+authenticatedApp.route('/admin', adminRoutes);
+
+
 const app = new Hono();
 
+app.route('/', authenticatedApp);
 app.route('/auth', authRoutes);
-app.route('/api', apiRoutes);
-app.route('/admin', adminRoutes);
-app.route('/', webRoutes);
 
 export default app;

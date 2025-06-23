@@ -16,7 +16,7 @@ export const userExists = async (db, id) => {
 }
 
 export const getUserById = async (db, id) => {
-    return await db.prepare('SELECT id, name, team, team_color FROM users WHERE id = ?').bind(id).first();
+    return await db.prepare('SELECT id, name, team, team_color, role FROM users WHERE id = ?').bind(id).first();
 };
 
 export const getSensitiveUserById = async (db, id) => {
@@ -37,21 +37,55 @@ export const deleteUser = async (db, userId) => {
     return await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
 }
 
-export const findOrCreateUser = async (db, googleUser) => {
-    let user = await getSensitiveUserById(db, googleUser.id);
+export const findOrCreateUser = async (db, googleUser, tokens) => {
+    let user = await getSensitiveUserById(db, googleUser.sub);
+
+    const expires_at = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString();
 
     if (!user) {
         user = {
-            id: googleUser.id,
+            id: googleUser.sub,
             name: googleUser.name,
             email: googleUser.email,
         };
-        await db.prepare('INSERT INTO users (id, name, email) VALUES (?, ?, ?)')
-            .bind(user.id, user.name, user.email)
-            .run();
+        await db.prepare(
+            'INSERT INTO users (id, name, email, google_access_token, google_access_token_expires_at, google_refresh_token) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(
+            user.id,
+            user.name,
+            user.email,
+            tokens.access_token,
+            expires_at,
+            tokens.refresh_token // This will be stored only on the first login
+        ).run();
+    } else {
+        // User exists, update tokens. Refresh token is only sent on first approval, so only update it if we get a new one.
+        const updateFields = ['google_access_token = ?', 'google_access_token_expires_at = ?'];
+        const params = [tokens.access_token, expires_at];
+
+        if (tokens.refresh_token) {
+            updateFields.push('google_refresh_token = ?');
+            params.push(tokens.refresh_token);
+        }
+        
+        params.push(user.id);
+
+        await db.prepare(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`).bind(...params).run();
     }
 
     return user;
+};
+
+
+export const getUserForRefresh = async (db, userId) => {
+    return await db.prepare('SELECT id, email, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
+};
+
+export const updateUserTokens = async (db, userId, { access_token, expires_in }) => {
+    const expires_at = new Date(Date.now() + (expires_in * 1000)).toISOString();
+    return await db.prepare(
+        'UPDATE users SET google_access_token = ?, google_access_token_expires_at = ? WHERE id = ?'
+    ).bind(access_token, expires_at, userId).run();
 };
 
 // --- Game Functions ---

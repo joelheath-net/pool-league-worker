@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { protectAPI } from './middleware.js';
+import { authContextMiddleware, protectAPI } from './middleware.js';
 import * as db from './database.js';
 
 const api = new Hono();

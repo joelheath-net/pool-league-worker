@@ -1,64 +1,91 @@
 import { getCookie } from 'hono/cookie';
-import { verify } from 'hono/jwt';
+import { verify, decode } from 'hono/jwt';
+import { performTokenRefresh } from './token-service.js';
+import * as db from './database.js';
 
-export const isAuthenticated = (c) => {
-    // Check if the user is authenticated by looking for a valid JWT in the cookies
+/**
+ * THIS IS THE NEW CENTRAL MIDDLEWARE.
+ * It runs on every request to determine the user's auth status.
+ * It will verify a token, and if it's expired, it will attempt a refresh.
+ * It populates c.get('isAuthenticated') and c.get('isAdmin') for all downstream middleware and renderers.
+ */
+export const authContextMiddleware = async (c, next) => {
+    // Set defaults
+    c.set('isAuthenticated', false);
+    c.set('isAdmin', false);
+
     const token = getCookie(c, 'auth_token');
-    if (!token) return false;
+    if (!token) {
+        return await next();
+    }
 
     try {
-        // Verify the token using the JWT_SECRET
-        const payload = verify(token, c.env.JWT_SECRET);
-        c.set('user', payload); // Store user data in context for later use
-        return true;
+        const payload = await verify(token, c.env.JWT_SECRET);
+        c.set('user', payload);
+        c.set('isAuthenticated', true);
+        const user = await db.getUserById(c.env.DB, payload.sub);
+        if (user && user.role === 'admin') {
+            c.set('isAdmin', true);
+        }
     } catch (error) {
-        return false; // Token is invalid or expired
+        // If token is expired, try to refresh it
+        if (error.name === 'JwtTokenExpired') {
+            console.log('[MIDDLEWARE] Token expired, attempting server-side refresh...');
+            const { payload } = decode(token);
+            const userId = payload?.sub;
+            if (userId) {
+                const newToken = await performTokenRefresh(c, userId);
+                if (newToken) {
+                    // If refresh worked, the new token is in the cookie. We need to verify it to set the context for the current request.
+                    const newPayload = await verify(newToken, c.env.JWT_SECRET);
+                    c.set('user', newPayload);
+                    c.set('isAuthenticated', true);
+                    const user = await db.getUserById(c.env.DB, newPayload.sub);
+                    if (user && user.role === 'admin') {
+                        c.set('isAdmin', true);
+                    }
+                    console.log('[MIDDLEWARE] Token refreshed successfully.');
+                }
+            }
+        }
+        // For any other error, we just leave the user as unauthenticated.
+    }
+    
+    await next();
+};
+
+
+// --- The protection middleware are now very simple ---
+
+export const protectWeb = async (c, next) => {
+    if (await c.get('isAuthenticated')) {
+        await next();
+    } else {
+        return c.redirect('/');
     }
 };
 
-// Do not set isAuthentic to true unless you are sure the user is authenticated
-export const isAdmin = async (c, isAuthentic = false) => {
-    if (!isAuthentic && !isAuthenticated(c))
-        return false;
-
-    const userPayload = await c.get('user');
-    const data = await c.env.DB.prepare('SELECT role FROM users WHERE id = ?')
-        .bind(userPayload.sub)
-        .first();
-    return data && data.role === 'admin';
-}
-
-// This middleware will be used to protect our API and web routes
-export const protectAPI = async (c, next) => {
-    if (isAuthenticated(c))
+export const protectAdminWeb = async (c, next) => {
+    if (await c.get('isAuthenticated') && c.get('isAdmin')) {
         await next();
-    else
-        return c.json({ message: 'Invalid token' }, 401);
+    } else {
+        return c.redirect('/');
+    }
 };
 
-export const protectWeb = async (c, next) => {
-    if (isAuthenticated(c))
+export const protectAPI = async (c, next) => {
+    if (await c.get('isAuthenticated')) {
         await next();
-    else
-        return c.redirect('/');
+    } else {
+        return c.json({ message: 'Unauthorized' }, 401);
+    }
 };
 
 export const protectAdminAPI = async (c, next) => {
-    if (isAuthenticated(c)) {
-        if (await isAdmin(c, true)) {
-            await next();
-        } else {
-            return c.json({ message: 'Access denied' }, 403);
-        }
-    } else {
-        return c.json({ message: 'Invalid token' }, 401);
-    }
-};
+    if (!await c.get('isAuthenticated'))
+        return c.json({ message: 'Unauthorized' }, 401);
+    if (!await c.get('isAdmin'))
+        return c.json({ message: 'Access denied' }, 403);
 
-
-export const protectAdminWeb = async (c, next) => {
-    if (await isAdmin(c))
-        await next();
-    else
-        return c.redirect('/');
+    await next();
 };

@@ -94,7 +94,7 @@ async function populateGameList() {
 
     } catch (error) {
         console.error("Error populating game list:", error);
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Failed to load game history.</td></tr>';
+        tableBody.innerHTML = html`<tr><td colspan="7" style="text-align: center;"><div class="table-cell">Failed to load game history.</div></td></tr>`;
     }
 }
 

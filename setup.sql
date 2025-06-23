@@ -1,10 +1,13 @@
 CREATE TABLE IF NOT EXISTS users (
-    id          TEXT  PRIMARY KEY                            NOT NULL,
-    email       TEXT  UNIQUE                                 NOT NULL,
-    name        TEXT                                         NOT NULL,
-    role        TEXT  DEFAULT 'user'                         NOT NULL   CHECK (role IN ('user', 'admin')),
-    team        TEXT  DEFAULT 'My Team'                      NOT NULL,
-    team_color  TEXT  DEFAULT '#ffffff'                      NOT NULL
+    id                               TEXT PRIMARY KEY NOT NULL,
+    email                            TEXT UNIQUE      NOT NULL,
+    name                             TEXT             NOT NULL,
+    role                             TEXT             DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'admin')),
+    team                             TEXT             DEFAULT 'My Team' NOT NULL,
+    team_color                       TEXT             DEFAULT '#ffffff' NOT NULL,
+    google_refresh_token             TEXT,
+    google_access_token              TEXT,
+    google_access_token_expires_at   DATETIME
 );
 
 

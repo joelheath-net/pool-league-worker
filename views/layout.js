@@ -15,7 +15,7 @@ const Header = ({ isAuthenticated, isAdmin }) => {
 
     const unauthenticatedNav = html`
         <nav>
-            <a href="/auth/google">Sign In</a>
+            <a href="/auth/google/login">Sign In</a>
         </nav>
     `;
 
