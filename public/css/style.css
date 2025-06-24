@@ -219,7 +219,7 @@ header nav a:hover, header nav a.active {
     border: none;
     cursor: pointer;
     padding: 0;
-    z-index: 10;
+    z-index: 1;
 }
 
 .hamburger-menu:focus {
