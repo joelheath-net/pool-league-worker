@@ -79,6 +79,13 @@ api.post('/log-game', protectAPI, async (c) => {
     if (!db.userExists(c.env.DB, gameData.winner)) return c.json({ message: 'Winner does not exist' }, 404);
     if (!db.userExists(c.env.DB, gameData.loser)) return c.json({ message: 'Loser does not exist' }, 404);
 
+    if (gameData.balls_remaining < 0 || gameData.balls_remaining > 8)
+        return c.json({ message: 'Balls remaining must be between 0 and 8' }, 400);
+    if (typeof gameData.fouled_on_black !== 'boolean')
+        return c.json({ message: 'Fouled on black must be a boolean value' }, 400);
+    if (isNaN(Date.parse(gameData.date)))
+        return c.json({ message: 'Invalid date format' }, 400);
+
     // Add author from the authenticated user context
     gameData.author_id = userPayload.sub;
 
@@ -112,7 +119,16 @@ api.patch('/game', protectAPI, async (c) => {
     if (!validation.valid) return c.json({ message: validation.message }, 400);
 
     if (gameData.player1_id === gameData.player2_id) return c.json({ message: 'Winner and loser cannot be the same' }, 400);
-    
+    if (!db.userExists(c.env.DB, gameData.player1_id)) return c.json({ message: 'Player 1 does not exist' }, 404);
+    if (!db.userExists(c.env.DB, gameData.player2_id)) return c.json({ message: 'Player 2 does not exist' }, 404);
+
+    if (gameData.balls_remaining < 0 || gameData.balls_remaining > 8)
+        return c.json({ message: 'Balls remaining must be between 0 and 8' }, 400);
+    if (typeof gameData.fouled_on_black !== 'boolean')
+        return c.json({ message: 'Fouled on black must be a boolean value' }, 400);
+    if (isNaN(Date.parse(gameData.played_at)))
+        return c.json({ message: 'Invalid date format' }, 400);
+
     gameData.author_id = userPayload.sub;
 
     try {
