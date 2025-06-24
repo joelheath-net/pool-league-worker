@@ -1,5 +1,3 @@
-const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
-
 function getContrastingTextColor(hexColor) {
     // Remove the hash at the start if it's there
     hexColor = hexColor.replace(/^#/, '');

@@ -1,5 +1,3 @@
-const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
-
 /**
  * Fetches all revisions and users, then populates the audit log.
  */
@@ -33,15 +31,21 @@ async function populateAuditLog() {
             const player2 = userMap.get(rev.player2_id) || { name: 'Unknown' };
             const winner = userMap.get(rev.winner_id) || { name: 'Unknown' };
 
+            const authorName = escapeHTML(author.name || 'N/A');
+
             // Format data for display
             const actionText = rev.revision_id === 0 
-                ? `${author.name} created a new record` 
-                : `${author.name} updated an existing record`;
+                ? `${authorName} created a new record` 
+                : `${authorName} updated an existing record`;
             
             const authoredDate = new Date(rev.authored_at).toLocaleString('en-GB');
             const playedDate = new Date(rev.played_at).toLocaleDateString('en-GB');
             const rematchText = rev.rematch_id === 0 ? 'First Match' : `Rematch ${rev.rematch_id}`;
             const fouledText = rev.fouled_on_black ? 'Yes' : 'No';
+
+            const player1Name = escapeHTML(player1.name || 'N/A');
+            const player2Name = escapeHTML(player2.name || 'N/A');
+            const winnerName = escapeHTML(winner.name || 'N/A');
 
             return html`
                 <div class="audit-entry">
@@ -50,9 +54,9 @@ async function populateAuditLog() {
                         <p class="meta">on ${authoredDate} (by ${author.email})</p>
                     </div>
                     <div class="audit-details">
-                        <h4>${player1.name} vs. ${player2.name} (${rematchText})</h4>
+                        <h4>${player1Name} vs. ${player2Name} (${rematchText})</h4>
                         <ul>
-                            <li><strong>Winner:</strong> ${winner.name}</li>
+                            <li><strong>Winner:</strong> ${winnerName}</li>
                             <li><strong>Date Played:</strong> ${playedDate}</li>
                             <li><strong>Balls Remaining:</strong> ${rev.balls_remaining}</li>
                             <li><strong>Fouled on Black:</strong> ${fouledText}</li>

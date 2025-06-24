@@ -1,5 +1,3 @@
-const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
-
 /**
  * Fetches the current user profile and populates the form fields.
  */

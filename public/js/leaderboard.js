@@ -1,5 +1,3 @@
-const html = (strings, ...values) => String.raw({ raw: strings }, ...values);
-
 function getContrastingTextColor(hexColor) {
     // Remove the hash at the start if it's there
     hexColor = hexColor.replace(/^#/, '');
@@ -66,11 +64,14 @@ async function populateLeaderboard() {
             const color = userData.team_color || '#ffffff'; // Default to white if no color
             const textColor = getContrastingTextColor(color);
 
+            const escapedName = escapeHTML(userData.name || 'N/A');
+            const escapedTeam = escapeHTML(userData.team || 'N/A');
+
             // Create the HTML for the table row
             return html`
                 <tr>
-                    <td class="sticky" style="background-color: ${color};"><div class="table-cell" style="color: ${textColor}">${userData.name || 'N/A'}</div></td>
-                    <td style="background-color: ${color};"><div class="table-cell" style="color: ${textColor}">${userData.team || 'N/A'}</div></td>
+                    <td class="sticky" style="background-color: ${color};"><div class="table-cell" style="color: ${textColor}">${escapedName}</div></td>
+                    <td style="background-color: ${color};"><div class="table-cell" style="color: ${textColor}">${escapedTeam}</div></td>
                     <td><div class="table-cell">${playerStats.points}</div></td>
                     <td><div class="table-cell">${playerStats.wins}</div></td>
                     <td><div class="table-cell">${playerStats.losses}</div></td>
