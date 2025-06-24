@@ -94,6 +94,8 @@ export const Layout = (props) => {
                 <p>Subscribe to <a href="https://youtube.joelheath.net">joelheath24</a>.</p>
             </footer>
 
+            
+            <script src="https://cdn.jsdelivr.net/npm/eta/dist/browser/eta.min.js"></script>
             <script src="/js/main.js"></script>
             ${script}
         </body>

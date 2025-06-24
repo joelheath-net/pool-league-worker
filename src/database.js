@@ -23,10 +23,6 @@ export const getSensitiveUserById = async (db, id) => {
     return await db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').bind(id).first();
 };
 
-export const getProfile = async (db, userId) => {
-    return await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
-};
-
 export const updateProfile = async (db, userId, { name, team, team_color }) => {
     return await db.prepare('UPDATE users SET name = ?, team = ?, team_color = ? WHERE id = ?')
         .bind(name, team, team_color, userId)

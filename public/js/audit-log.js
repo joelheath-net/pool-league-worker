@@ -31,39 +31,34 @@ async function populateAuditLog() {
             const player2 = userMap.get(rev.player2_id) || { name: 'Unknown' };
             const winner = userMap.get(rev.winner_id) || { name: 'Unknown' };
 
-            const authorName = escapeHTML(author.name || 'N/A');
 
             // Format data for display
             const actionText = rev.revision_id === 0 
-                ? `${authorName} created a new record` 
-                : `${authorName} updated an existing record`;
+                ? 'created a new record' 
+                : 'updated an existing record';
             
             const authoredDate = new Date(rev.authored_at).toLocaleString('en-GB');
             const playedDate = new Date(rev.played_at).toLocaleDateString('en-GB');
-            const rematchText = rev.rematch_id === 0 ? 'First Match' : `Rematch ${rev.rematch_id}`;
+            const rematchText = rev.rematch_id === 0 ? 'First Match' : eta.render(`Rematch {{= it.rematch_id }}`, rev);
             const fouledText = rev.fouled_on_black ? 'Yes' : 'No';
 
-            const player1Name = escapeHTML(player1.name || 'N/A');
-            const player2Name = escapeHTML(player2.name || 'N/A');
-            const winnerName = escapeHTML(winner.name || 'N/A');
-
-            return html`
+            return eta.render(html`
                 <div class="audit-entry">
                     <div class="audit-entry-header">
-                        <h3>${actionText}</h3>
-                        <p class="meta">on ${authoredDate} (by ${author.email})</p>
+                        <h3>{{= it.author.name }} {{= it.actionText }}</h3>
+                        <p class="meta">on {{= it.authoredDate }} (by {{= it.author.email }})</p>
                     </div>
                     <div class="audit-details">
-                        <h4>${player1Name} vs. ${player2Name} (${rematchText})</h4>
+                        <h4>{{= it.player1.name }} vs. {{= it.player2.name }} ({{= it.rematchText }})</h4>
                         <ul>
-                            <li><strong>Winner:</strong> ${winnerName}</li>
-                            <li><strong>Date Played:</strong> ${playedDate}</li>
-                            <li><strong>Balls Remaining:</strong> ${rev.balls_remaining}</li>
-                            <li><strong>Fouled on Black:</strong> ${fouledText}</li>
+                            <li><strong>Winner:</strong> {{= it.winner.name }}</li>
+                            <li><strong>Date Played:</strong> {{= it.playedDate }}</li>
+                            <li><strong>Balls Remaining:</strong> {{= it.rev.balls_remaining }}</li>
+                            <li><strong>Fouled on Black:</strong> {{= it.fouledText }}</li>
                         </ul>
                     </div>
                 </div>
-            `;
+            `, { actionText, authoredDate, author, player1, player2, winner, playedDate, rematchText, fouledText, rev });
         }).join('');
 
         // 3. Populate the container

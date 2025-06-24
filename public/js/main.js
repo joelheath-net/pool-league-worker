@@ -31,3 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+const eta = window.Eta;
+eta.configure({
+    tags: ["{{", "}}"]
+});

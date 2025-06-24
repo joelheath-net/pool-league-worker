@@ -64,23 +64,20 @@ async function populateLeaderboard() {
             const color = userData.team_color || '#ffffff'; // Default to white if no color
             const textColor = getContrastingTextColor(color);
 
-            const escapedName = escapeHTML(userData.name || 'N/A');
-            const escapedTeam = escapeHTML(userData.team || 'N/A');
-
             // Create the HTML for the table row
-            return html`
+            return eta.render(html`
                 <tr>
-                    <td class="sticky" style="background-color: ${color};"><div class="table-cell" style="color: ${textColor}">${escapedName}</div></td>
-                    <td style="background-color: ${color};"><div class="table-cell" style="color: ${textColor}">${escapedTeam}</div></td>
-                    <td><div class="table-cell">${playerStats.points}</div></td>
-                    <td><div class="table-cell">${playerStats.wins}</div></td>
-                    <td><div class="table-cell">${playerStats.losses}</div></td>
-                    <td><div class="table-cell">${playerStats.fouls_on_black}</div></td>
-                    <td><div class="table-cell">${playerStats.balls_remaining}</div></td>
-                    <td><div class="table-cell">${played}</div></td>
-                    <td><div class="table-cell">${winLossRatio}</div></td>
+                    <td class="sticky" style="background-color: {{= it.color }}"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.name }}</div></td>
+                    <td style="background-color: {{= it.color }}"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.team }}</div></td>
+                    <td><div class="table-cell">{{= it.points }}</div></td>
+                    <td><div class="table-cell">{{= it.wins }}</div></td>
+                    <td><div class="table-cell">{{= it.losses }}</div></td>
+                    <td><div class="table-cell">{{= it.fouls_on_black }}</div></td>
+                    <td><div class="table-cell">{{= it.balls_remaining }}</div></td>
+                    <td><div class="table-cell">{{= it.played }}</div></td>
+                    <td><div class="table-cell">{{= it.winLossRatio }}</div></td>
                 </tr>
-            `;
+            `, { ...userData, ...playerStats, color, textColor, played, winLossRatio });
         }));
 
         // 5. Update the table body with all the generated rows
@@ -89,7 +86,7 @@ async function populateLeaderboard() {
     } catch (error) {
         console.error('Error building leaderboard:', error);
         // Optionally, display an error message in the UI
-        tableBody.innerHTML = '<tr><td colspan="9">Failed to load leaderboard.</td></tr>';
+        tableBody.innerHTML = html`<tr><td colspan="9"><div class="table-cell">Failed to load leaderboard.</div></td></tr>`;
     }
 }
 

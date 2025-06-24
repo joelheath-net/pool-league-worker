@@ -27,7 +27,7 @@ async function populateGameList() {
         const userMap = new Map(users.map(user => [user.id, user]));
 
         if (games.length === 0) {
-                tableBody.innerHTML = html`<tr><td colspan="7" style="text-align: center;"><div class="table-cell">No games have been logged yet.</div></td></tr>`;
+                tableBody.innerHTML = html`<tr><td colspan="${isAuthenticated ? 7 : 6}" style="text-align: center;"><div class="table-cell">No games have been logged yet.</div></td></tr>`;
                 return;
         }
 
@@ -50,31 +50,27 @@ async function populateGameList() {
                 day: '2-digit', month: 'short', year: 'numeric'
             });
             const fouledText = game.fouled_on_black ? 'Yes' : 'No';
-            const rematchText = game.rematch_id === 0 ? 'First Match' : `Rematch ${game.rematch_id}`;
+            const rematchText = game.rematch_id === 0 ? 'First Match' : eta.render(`Rematch {{= it.rematch_id }}`, game);
             
             // Construct the edit link with query parameters
             const editUrl = `/edit-game?player1_id=${game.player1_id}&player2_id=${game.player2_id}&rematch_id=${game.rematch_id}`;
 
             const winnerColor = getContrastingTextColor(winnerInfo.team_color);            
             const loserColor = getContrastingTextColor(loserInfo.team_color);
-            const escapedWinnerName = escapeHTML(winnerInfo.name || 'N/A');
-            const escapedWinnerTeam = escapeHTML(winnerInfo.team || 'N/A');
-            const escapedLoserName = escapeHTML(loserInfo.name || 'N/A');
-            const escapedLoserTeam = escapeHTML(loserInfo.team || 'N/A');
 
-            return html`
+            return eta.render(html`
                 <tr>
-                    <td><div class="table-cell">${playedDate}</div></td>
-                    <td style="background-color: ${winnerInfo.team_color};"><div class="table-cell" style="color: ${winnerColor}">${escapedWinnerName} (${escapedWinnerTeam})</div></td>
-                    <td style="background-color: ${loserInfo.team_color};"><div class="table-cell" style="color: ${loserColor}">${escapedLoserName} (${escapedLoserTeam})</div></td>
-                    <td><div class="table-cell">${fouledText}</div></td>
-                    <td><div class="table-cell">${game.balls_remaining}</div></td>
-                    <td><div class="table-cell">${rematchText}</div></td>
+                    <td><div class="table-cell">{{= it.playedDate }}</div></td>
+                    <td style="background-color: {{= it.winnerInfo.team_color }};"><div class="table-cell" style="color: {{= it.winnerColor }}">{{= it.winnerInfo.name }} ({{= it.winnerInfo.team }})</div></td>
+                    <td style="background-color: {{= it.loserInfo.team_color }};"><div class="table-cell" style="color: {{= it.loserColor }}">{{= it.loserInfo.name }} ({{= it.loserInfo.team }})</div></td>
+                    <td><div class="table-cell">{{= it.fouledText }}</div></td>
+                    <td><div class="table-cell">{{= it.balls_remaining }}</div></td>
+                    <td><div class="table-cell">{{= it.rematchText }}</div></td>
                     ${isAuthenticated 
-                        ? html`<td><div class="table-cell"><a href="${editUrl}">Edit</a></div></td>` 
+                        ? html`<td><div class="table-cell"><a href="{{= it.editUrl }}">Edit</a></div></td>` 
                         : ''}
                 </tr>
-            `;
+            `, { playedDate, winnerInfo, loserInfo, fouledText, rematchText, ...game, winnerColor, loserColor, editUrl });
         }).join('');
 
         // 4. Populate the table body
@@ -82,7 +78,7 @@ async function populateGameList() {
 
     } catch (error) {
         console.error("Error populating game list:", error);
-        tableBody.innerHTML = html`<tr><td colspan="7" style="text-align: center;"><div class="table-cell">Failed to load game history.</div></td></tr>`;
+        tableBody.innerHTML = html`<tr><td colspan="${isAuthenticated ? 7 : 6}" style="text-align: center;"><div class="table-cell">Failed to load game history.</div></td></tr>`;
     }
 }
 
