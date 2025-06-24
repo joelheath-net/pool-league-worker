@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { authContextMiddleware, protectAPI } from './middleware.js';
+import { protectAPI } from './middleware.js';
 import * as db from './database.js';
 
 const api = new Hono();
@@ -43,6 +43,13 @@ api.get('/game-list', async (c) => {
 api.get('/users-sensitive', protectAPI, async (c) => {
     const users = await db.getSensitiveUsers(c.env.DB);
     return c.json(users);
+});
+
+api.get('/profile', protectAPI, async (c) => {
+    const userPayload = await c.get('user');
+    if (!userPayload) return c.json({ message: 'Unauthorized' }, 401);
+    
+    return c.json(await db.getUserById(c.env.DB, userPayload.sub));
 });
 
 api.patch('/profile', protectAPI, async (c) => {
