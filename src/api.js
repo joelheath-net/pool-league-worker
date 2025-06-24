@@ -33,6 +33,11 @@ api.get('/leaderboard', async (c) => {
     return c.json(stats);
 });
 
+api.get('/game-list', async (c) => {
+    const games = await db.getGameList(c.env.DB);
+    return c.json(games);
+});
+
 // --- AUTHENTICATED ROUTES ---
 
 api.get('/users-sensitive', protectAPI, async (c) => {
@@ -79,11 +84,6 @@ api.post('/log-game', protectAPI, async (c) => {
 
     await db.createGameRevision(c.env.DB, gameData);
     return c.json({ message: 'Game logged successfully' }, 201);
-});
-
-api.get('/game-list', protectAPI, async (c) => {
-    const games = await db.getGameList(c.env.DB);
-    return c.json(games);
 });
 
 api.get('/audit-log', protectAPI, async (c) => {

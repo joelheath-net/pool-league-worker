@@ -12,7 +12,6 @@ import { AdminPage } from '../views/admin-panel';
 
 const web = new Hono();
 
-// This middleware sets up the renderer, which can now depend on the auth context.
 web.use('*', async (c, next) => {
     c.setRenderer(async (content, props) => {
         const title = props.title || "St Paul's League";
@@ -20,7 +19,6 @@ web.use('*', async (c, next) => {
         const script = props.script;
         const isAuthenticated = c.get('isAuthenticated');
         const isAdmin = c.get('isAdmin');
-
 
         return c.html(
             <Layout {...{ title, style, script, isAuthenticated, isAdmin }}>
@@ -31,21 +29,21 @@ web.use('*', async (c, next) => {
     await next();
 });
 
-// --- Routes ---
-
-// Public route
+// --- Public Routes ---
 web.get('/', (c) => {
     return c.render(<LeaderboardPage />, { title: `St Paul's League`, script: '/js/leaderboard.js' });
 });
 
-// Protected routes
+web.get('/game-list', (c) => {
+    return c.render(<GamesPage isAuthenticated={c.get('isAuthenticated')} />, { title: 'Game History', script: '/js/game-list.js' });
+});
+
+// --- Protected Routes ---
 web.get('/log-game', protectWeb, (c) => {
     return c.render(<LogGamePage />, { title: 'Log a Game', script: '/js/log-game.js' });
 });
 
-web.get('/game-list', protectWeb, (c) => {
-    return c.render(<GamesPage />, { title: 'Game History', script: '/js/game-list.js' });
-});
+
 
 web.get('/audit-log', protectWeb, (c) => {
     return c.render(<AuditPage />, { title: 'Audit Log', script: '/js/audit-log.js', style: '/css/audit-log.css' });

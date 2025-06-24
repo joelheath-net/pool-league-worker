@@ -41,12 +41,12 @@ async function populateLeaderboard() {
             if (b.points !== a.points) {
                 return b.points - a.points;
             }
-            // Secondary sort: fouls_on_black ascending
-            if (a.fouls_on_black !== b.fouls_on_black) {
-                return a.fouls_on_black - b.fouls_on_black;
+            // Secondary sort: balls_remaining ascending
+            if (a.balls_remaining !== b.balls_remaining) {
+                return a.balls_remaining - b.balls_remaining;
             }
-            // Tertiary sort: balls_remaining ascending
-            return a.balls_remaining - b.balls_remaining;
+            // Tertiary sort: fouls_on_black ascending
+            return a.fouls_on_black - b.fouls_on_black;
         });
 
         // 4. Generate HTML rows from the sorted data

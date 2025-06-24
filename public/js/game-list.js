@@ -21,6 +21,9 @@ function getContrastingTextColor(hexColor) {
  */
 async function populateGameList() {
     const tableBody = document.getElementById('games-list-body');
+    const container = document.querySelector('.container');
+    const isAuthenticated = container && container.dataset.isAuthenticated === 'true';
+
     //tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Loading game history...</td></tr>';
 
     try {
@@ -84,7 +87,9 @@ async function populateGameList() {
                     <td><div class="table-cell">${fouledText}</div></td>
                     <td><div class="table-cell">${game.balls_remaining}</div></td>
                     <td><div class="table-cell">${rematchText}</div></td>
-                    <td><div class="table-cell"><a href="${editUrl}">Edit</a></div></td>
+                    ${isAuthenticated 
+                        ? html`<td><div class="table-cell"><a href="${editUrl}">Edit</a></div></td>` 
+                        : ''}
                 </tr>
             `;
         }).join('');
