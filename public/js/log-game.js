@@ -61,6 +61,7 @@ document.getElementById('log-game-form').addEventListener('submit', async functi
     // The checkbox value will be 'on' if checked, or null if not.
     // We can convert this to a proper boolean.
     data.fouled_on_black = data.fouled_on_black === 'on';
+    data.balls_remaining = parseInt(data.balls_remaining, 10);
 
     console.log("Game Logged", data);
 
