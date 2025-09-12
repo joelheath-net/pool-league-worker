@@ -123,4 +123,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    const archiveSeasonButton = document.querySelector('#archive-season-button');
+    if (archiveSeasonButton) {
+        archiveSeasonButton.addEventListener('click', async () => {
+            const seasonName = document.getElementById('season-name').value;
+            if (!seasonName.trim()) {
+                return alert('Please enter a name for the season before archiving.');
+            }
+
+            if (confirm(`Are you sure you want to archive the current season as "${seasonName}"? This will save the final leaderboard and delete all current game records. This action cannot be undone.`)) {
+                try {
+                    const response = await fetch('/admin/archive-season', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ seasonName })
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Failed to archive the season');
+                    }
+
+                    alert(`Season archived successfully with ID: ${result.newSeasonId}. The leaderboard is now cleared for the new season.`);
+                    window.location.href = `/archive/${result.newSeasonId}`;
+                } catch (error) {
+                    console.error('Error archiving season:', error);
+                    alert(`An error occurred while archiving the season: ${error.message}`);
+                }
+            }
+        });
+    }
 });

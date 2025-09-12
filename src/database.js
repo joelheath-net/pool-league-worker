@@ -107,7 +107,7 @@ export const getGameList = async (db) => {
             SELECT *, ROW_NUMBER() OVER (PARTITION BY player1_id, player2_id, rematch_id ORDER BY revision_id DESC) as rn
             FROM game_revisions
         )
-        SELECT * FROM RankedRevisions WHERE rn = 1 ORDER BY played_at DESC, player1_id, player2_id, rematch_id DESC
+        SELECT * FROM RankedRevisions WHERE rn = 1 ORDER BY played_at DESC, rematch_id DESC, player1_id, player2_id
     `).all();
     return results;
 };
@@ -208,4 +208,82 @@ export const importGames = async (db, gamesToProcess) => {
         await db.batch(statements);
     }
     return statements.length;
+};
+
+
+
+// --- Archive Functions ---
+
+export const getArchivedLeaderboard = async (db, seasonId) => {
+    const { results } = await db.prepare(`
+        SELECT
+            a.player_id as playerId,
+            u.name,
+            u.team,
+            u.team_color,
+            a.wins,
+            a.losses,
+            a.balls_remaining,
+            a.fouls_on_black,
+            a.points
+        FROM archived_tables a
+        JOIN users u ON a.player_id = u.id
+        WHERE a.season_id = ?
+    `).bind(seasonId).all();
+    return results;
+};
+
+export const getArchivedSeasonInfo = async (db, seasonId) => {
+    return await db.prepare('SELECT id, name FROM archived_seasons WHERE id = ?').bind(seasonId).first();
+}
+
+export const archiveSeason = async (db, seasonName) => {
+    // 1. Get the current leaderboard stats
+    const leaderboardStats = await getLeaderboardStats(db);
+    if (leaderboardStats.length === 0) {
+        throw new Error("Cannot archive an empty season.");
+    }
+
+    // 2. Process stats to calculate points
+    const processedStats = leaderboardStats.map(playerStats => {
+        const points = playerStats.wins * 3 + playerStats.losses - playerStats.fouls_on_black;
+        return { ...playerStats, points };
+    });
+
+    // 3. Create a new season entry and get its ID
+    const seasonId = (await db.prepare(
+        'INSERT INTO archived_seasons (name) VALUES (?)'
+    ).bind(seasonName).run())
+    .meta.last_row_id;
+
+    console.log(seasonId);
+
+    console.log(processedStats);
+
+    // 4. Prepare statements to insert leaderboard data
+    const insertStatements = processedStats.map(stats => {
+        return db.prepare(
+            `INSERT INTO archived_tables (season_id, player_id, points, wins, losses, fouls_on_black, balls_remaining)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            seasonId,
+            stats.playerId,
+            stats.points,
+            stats.wins,
+            stats.losses,
+            stats.fouls_on_black,
+            stats.balls_remaining
+        );
+    });
+
+    // 5. Prepare statement to clear current games
+    const clearGamesStatement = db.prepare('DELETE FROM game_revisions');
+
+    // 6. Batch all operations together in a transaction
+    await db.batch([
+        ...insertStatements,
+        clearGamesStatement
+    ]);
+
+    return { newSeasonId: seasonId };
 };

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS game_revisions (
     player2_id       TEXT      NOT NULL,
     rematch_id       INTEGER   NOT NULL,
     winner_id        TEXT      NOT NULL,
-    
+
     revision_id      INTEGER   NOT NULL   DEFAULT 0,
     author_id        TEXT      NOT NULL,
     authored_at      DATETIME  NOT NULL   DEFAULT CURRENT_TIMESTAMP,
@@ -31,6 +31,27 @@ CREATE TABLE IF NOT EXISTS game_revisions (
     FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (author_id)  REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (winner_id)  REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS archived_seasons (
+    id    INTEGER  PRIMARY KEY  AUTOINCREMENT,
+    name  TEXT     NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS archived_tables (
+    season_id        INTEGER  NOT NULL,
+    player_id        TEXT     NOT NULL,
+
+    points           INTEGER  NOT NULL,
+    wins             INTEGER  NOT NULL,
+    losses           INTEGER  NOT NULL,
+    fouls_on_black   INTEGER  NOT NULL,
+    balls_remaining  INTEGER  NOT NULL,
+
+    PRIMARY KEY (season_id, player_id),
+
+    FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (season_id) REFERENCES archived_seasons(id) ON DELETE CASCADE
 );
 
 

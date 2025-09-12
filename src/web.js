@@ -9,6 +9,8 @@ import { AuditPage } from '../views/audit-log';
 import { CustomizePage } from '../views/customize';
 import { EditGamePage } from '../views/edit-game';
 import { AdminPage } from '../views/admin-panel';
+import { ArchivedLeaderboardPage } from '../views/archived-leaderboard';
+
 
 const web = new Hono();
 
@@ -36,6 +38,11 @@ web.get('/', (c) => {
 
 web.get('/game-list', (c) => {
     return c.render(<GamesPage isAuthenticated={c.get('isAuthenticated')} />, { title: 'Game History', script: '/js/game-list.js' });
+});
+
+web.get('/archive/:season_id', (c) => {
+    const { season_id } = c.req.param();
+    return c.render(<ArchivedLeaderboardPage season_id={season_id} />, { title: `Archived Season ${season_id}`, script: '/js/archived-leaderboard.js' });
 });
 
 // --- Protected Routes ---

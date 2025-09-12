@@ -3,6 +3,11 @@ export const AdminPage = () => {
         <div class="container centre-container">
             <h1 class="centre-title">Admin Panel</h1>
             <div class="form-group">
+                <label for="season-name">Archive Season</label>
+                <input type="text" id="season-name" class="input" placeholder="Enter season name (e.g. 2024/25)" />
+                <button id="archive-season-button" class="button" style="margin-top: 4px;">Archive</button>
+            </div>
+            <div class="form-group">
                 <button id="reset-db-button" class="button">Delete All Game Records</button>
             </div>
             <div class="form-group">

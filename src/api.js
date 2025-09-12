@@ -38,6 +38,18 @@ api.get('/game-list', async (c) => {
     return c.json(games);
 });
 
+api.get('/archive/:season_id', async (c) => {
+    const { season_id } = c.req.param();
+    const seasonInfo = await db.getArchivedSeasonInfo(c.env.DB, season_id);
+    const leaderboard = await db.getArchivedLeaderboard(c.env.DB, season_id);
+
+    if (!seasonInfo) {
+        return c.json({ error: 'Archive not found' }, 404);
+    }
+
+    return c.json({ seasonInfo, leaderboard });
+});
+
 // --- AUTHENTICATED ROUTES ---
 
 api.get('/users-sensitive', protectAPI, async (c) => {

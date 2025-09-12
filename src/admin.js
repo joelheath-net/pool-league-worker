@@ -92,4 +92,18 @@ admin.post('/import-games', async (c) => {
     }
 });
 
+admin.post('/archive-season', async (c) => {
+    try {
+        const { seasonName } = await c.req.json();
+        if (!seasonName) {
+            return c.json({ error: 'Season name is required' }, 400);
+        }
+        const result = await db.archiveSeason(c.env.DB, seasonName);
+        return c.json({ message: 'Season archived successfully', ...result });
+    } catch (error) {
+        console.error('Error archiving season:', error);
+        return c.json({ error: error.message || 'Failed to archive season' }, 500);
+    }
+});
+
 export default admin;
