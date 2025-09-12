@@ -1,12 +1,12 @@
-export const ArchivedLeaderboardPage = ({ season_id }) => {
+export const ArchivedLeaderboardPage = ({ seasonId }) => {
     return (
-        <div class="container" data-season-id={season_id}>
+        <div class="container" data-season-id={seasonId}>
             <h1 class="centre-title" id="season-name">Loading...</h1>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th class="sticky" style="background-color: #e9ecef;" ><div class="table-cell">Player</div></th>
+                            <th class="sticky" style="background-color: #e9ecef;"><div class="table-cell">Player</div></th>
                             <th><div class="table-cell">Team Name</div></th>
                             <th><div class="table-cell">Points</div></th>
                             <th><div class="table-cell">Wins</div></th>

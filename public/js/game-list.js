@@ -2,7 +2,7 @@
  * Fetches all games and users, then populates the history table.
  */
 async function populateGameList() {
-    const tableBody = document.getElementById('games-list-body');
+    const tableBody = document.querySelector('#games-list-body');
     const container = document.querySelector('.container');
     const isAuthenticated = container && container.dataset.isAuthenticated === 'true';
 
@@ -34,37 +34,37 @@ async function populateGameList() {
         // 3. Process each game and create its table row HTML
         const rowsHtml = games.map(game => {
             // Determine loser ID
-            const loser_id = game.winner_id === game.player1_id ? game.player2_id : game.player1_id;
+            const loserId = game.winnerId === game.player1Id ? game.player2Id : game.player1Id;
             
             // Get user objects from the map
-            const winner = userMap.get(game.winner_id);
-            const loser = userMap.get(loser_id);
+            const winner = userMap.get(game.winnerId);
+            const loser = userMap.get(loserId);
 
             // Default user object to prevent errors if a user is not found
-            const unknownUser = { name: 'Unknown', team: 'N/A', team_color: '#ffffff' };
+            const unknownUser = { name: 'Unknown', team: 'N/A', teamColor: '#ffffff' };
             const winnerInfo = winner || unknownUser;
             const loserInfo = loser || unknownUser;
 
             // Format data for display
-            const playedDate = new Date(game.played_at).toLocaleDateString('en-GB', {
+            const playedDate = new Date(game.playedAt).toLocaleDateString('en-GB', {
                 day: '2-digit', month: 'short', year: 'numeric'
             });
-            const fouledText = game.fouled_on_black ? 'Yes' : 'No';
-            const rematchText = game.rematch_id === 0 ? 'First Match' : eta.render(`Rematch {{= it.rematch_id }}`, game);
-            
-            // Construct the edit link with query parameters
-            const editUrl = `/edit-game?player1_id=${game.player1_id}&player2_id=${game.player2_id}&rematch_id=${game.rematch_id}`;
+            const fouledText = game.fouledOnBlack ? 'Yes' : 'No';
+            const rematchText = game.rematchId === 0 ? 'First Match' : eta.render(`Rematch {{= it.rematchId }}`, game);
 
-            const winnerColor = getContrastingTextColor(winnerInfo.team_color);            
-            const loserColor = getContrastingTextColor(loserInfo.team_color);
+            // Construct the edit link with query parameters
+            const editUrl = `/edit-game?player1=${game.player1Id}&player2=${game.player2Id}&rematch=${game.rematchId}`;
+
+            const winnerColor = getContrastingTextColor(winnerInfo.teamColor);
+            const loserColor = getContrastingTextColor(loserInfo.teamColor);
 
             return eta.render(html`
                 <tr>
                     <td><div class="table-cell">{{= it.playedDate }}</div></td>
-                    <td style="background-color: {{= it.winnerInfo.team_color }};"><div class="table-cell" style="color: {{= it.winnerColor }}">{{= it.winnerInfo.name }} ({{= it.winnerInfo.team }})</div></td>
-                    <td style="background-color: {{= it.loserInfo.team_color }};"><div class="table-cell" style="color: {{= it.loserColor }}">{{= it.loserInfo.name }} ({{= it.loserInfo.team }})</div></td>
+                    <td style="background-color: {{= it.winnerInfo.teamColor }};"><div class="table-cell" style="color: {{= it.winnerColor }}">{{= it.winnerInfo.name }} ({{= it.winnerInfo.team }})</div></td>
+                    <td style="background-color: {{= it.loserInfo.teamColor }};"><div class="table-cell" style="color: {{= it.loserColor }}">{{= it.loserInfo.name }} ({{= it.loserInfo.team }})</div></td>
                     <td><div class="table-cell">{{= it.fouledText }}</div></td>
-                    <td><div class="table-cell">{{= it.balls_remaining }}</div></td>
+                    <td><div class="table-cell">{{= it.ballsRemaining }}</div></td>
                     <td><div class="table-cell">{{= it.rematchText }}</div></td>
                     ${isAuthenticated 
                         ? html`<td><div class="table-cell"><a href="{{= it.editUrl }}">Edit</a></div></td>` 

@@ -38,10 +38,10 @@ api.get('/game-list', async (c) => {
     return c.json(games);
 });
 
-api.get('/archive/:season_id', async (c) => {
-    const { season_id } = c.req.param();
-    const seasonInfo = await db.getArchivedSeasonInfo(c.env.DB, season_id);
-    const leaderboard = await db.getArchivedLeaderboard(c.env.DB, season_id);
+api.get('/archive/:seasonId', async (c) => {
+    const { seasonId } = c.req.param();
+    const seasonInfo = await db.getArchivedSeasonInfo(c.env.DB, seasonId);
+    const leaderboard = await db.getArchivedLeaderboard(c.env.DB, seasonId);
 
     if (!seasonInfo) {
         return c.json({ error: 'Archive not found' }, 404);
@@ -68,8 +68,7 @@ api.patch('/profile', protectAPI, async (c) => {
     const userPayload = await c.get('user');
     const profileData = await c.req.json();
 
-    // Application-level validation remains in the API layer
-    if (!/^#[0-9a-fA-F]{6}$/.test(profileData.team_color)) {
+    if (!/^#[0-9a-fA-F]{6}$/.test(profileData.teamColor)) {
         return c.json({ message: 'Invalid team color format. Must be hex color codes in format #RRGGBB' }, 400);
     }
 
@@ -83,8 +82,8 @@ api.post('/log-game', protectAPI, async (c) => {
     
     // Input validation
     if (!gameData || typeof gameData !== 'object') return c.json({ message: 'Invalid game data format' }, 400);
-    
-    const requiredFields = ['winner', 'loser', 'balls_remaining', 'fouled_on_black', 'date'];
+
+    const requiredFields = ['winner', 'loser', 'ballsRemaining', 'fouledOnBlack', 'date'];
     const validation = validateFields(requiredFields, gameData);
     if (!validation.valid) return c.json({ message: validation.message }, 400);
     
@@ -92,15 +91,15 @@ api.post('/log-game', protectAPI, async (c) => {
     if (!db.userExists(c.env.DB, gameData.winner)) return c.json({ message: 'Winner does not exist' }, 404);
     if (!db.userExists(c.env.DB, gameData.loser)) return c.json({ message: 'Loser does not exist' }, 404);
 
-    if (typeof gameData.balls_remaining !== 'number' || isNaN(gameData.balls_remaining) || gameData.balls_remaining < 0 || gameData.balls_remaining > 8)
+    if (typeof gameData.ballsRemaining !== 'number' || isNaN(gameData.ballsRemaining) || gameData.ballsRemaining < 0 || gameData.ballsRemaining > 8)
         return c.json({ message: 'Balls remaining must be a number between 0 and 8' }, 400);
-    if (typeof gameData.fouled_on_black !== 'boolean')
+    if (typeof gameData.fouledOnBlack !== 'boolean')
         return c.json({ message: 'Fouled on black must be a boolean value' }, 400);
     if (isNaN(Date.parse(gameData.date)))
         return c.json({ message: 'Invalid date format' }, 400);
 
     // Add author from the authenticated user context
-    gameData.author_id = userPayload.sub;
+    gameData.authorId = userPayload.sub;
 
     await db.createGameRevision(c.env.DB, gameData);
     return c.json({ message: 'Game logged successfully' }, 201);
@@ -127,22 +126,25 @@ api.patch('/game', protectAPI, async (c) => {
     // Input validation
     if (!gameData || typeof gameData !== 'object') return c.json({ message: 'Invalid game data format' }, 400);
 
-    const requiredFields = ['player1_id', 'player2_id', 'rematch_id', 'winner_id', 'balls_remaining', 'fouled_on_black', 'played_at'];
+    const requiredFields = ['player1Id', 'player2Id', 'rematchId', 'winnerId', 'ballsRemaining', 'fouledOnBlack', 'playedAt'];
     const validation = validateFields(requiredFields, gameData);
     if (!validation.valid) return c.json({ message: validation.message }, 400);
 
-    if (gameData.player1_id === gameData.player2_id) return c.json({ message: 'Winner and loser cannot be the same' }, 400);
-    if (!db.userExists(c.env.DB, gameData.player1_id)) return c.json({ message: 'Player 1 does not exist' }, 404);
-    if (!db.userExists(c.env.DB, gameData.player2_id)) return c.json({ message: 'Player 2 does not exist' }, 404);
+    if (gameData.player1Id === gameData.player2Id) return c.json({ message: 'Winner and loser cannot be the same' }, 400);
+    if (!db.userExists(c.env.DB, gameData.player1Id)) return c.json({ message: 'Player 1 does not exist' }, 404);
+    if (!db.userExists(c.env.DB, gameData.player2Id)) return c.json({ message: 'Player 2 does not exist' }, 404);
 
-    if (typeof gameData.balls_remaining !== 'number' || isNaN(gameData.balls_remaining) || gameData.balls_remaining < 0 || gameData.balls_remaining > 8)
+    console.log(gameData);
+    if (typeof gameData.rematchId !== 'number' || !Number.isInteger(gameData.rematchId) || gameData.rematchId < 0)
+        return c.json({ message: 'Rematch ID must be a non-negative integer' }, 400);
+    if (typeof gameData.ballsRemaining !== 'number' || !Number.isInteger(gameData.ballsRemaining) || gameData.ballsRemaining < 0 || gameData.ballsRemaining > 8)
         return c.json({ message: 'Balls remaining must be a number between 0 and 8' }, 400);
-    if (typeof gameData.fouled_on_black !== 'boolean')
+    if (typeof gameData.fouledOnBlack !== 'boolean')
         return c.json({ message: 'Fouled on black must be a boolean value' }, 400);
-    if (isNaN(Date.parse(gameData.played_at)))
+    if (isNaN(Date.parse(gameData.playedAt)))
         return c.json({ message: 'Invalid date format' }, 400);
 
-    gameData.author_id = userPayload.sub;
+    gameData.authorId = userPayload.sub;
 
     try {
         await db.updateGame(c.env.DB, gameData);

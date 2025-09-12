@@ -1,13 +1,36 @@
+// --- Case Conversion Helpers ---
+
+const toCamel = (s) => s.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+const keysToCamel = (obj) => {
+    if (obj === null || obj === undefined)
+        return obj;
+
+    if (Array.isArray(obj))
+        return obj.map(v => keysToCamel(v));
+
+    if (typeof obj === 'object')
+        return Object.keys(obj).reduce((acc, key) => {
+            acc[toCamel(key)] = keysToCamel(obj[key]);
+            return acc;
+        }, {});
+
+    if (!['string', 'number', 'boolean'].includes(typeof obj))
+        console.warn('`keysToCamel` received unexpected value:', obj);
+
+    return obj;
+};
+
 // --- User Functions ---
 
 export const getUsers = async (db) => {
     const { results } = await db.prepare('SELECT id, name, team, team_color FROM users').all();
-    return results;
+    return keysToCamel(results);
 };
 
 export const getSensitiveUsers = async (db) => {
     const { results } = await db.prepare('SELECT id, name, email FROM users').all();
-    return results;
+    return keysToCamel(results);
 };
 
 export const userExists = async (db, id) => {
@@ -16,16 +39,18 @@ export const userExists = async (db, id) => {
 }
 
 export const getUserById = async (db, id) => {
-    return await db.prepare('SELECT id, name, team, team_color FROM users WHERE id = ?').bind(id).first();
+    const user = await db.prepare('SELECT id, name, team, team_color FROM users WHERE id = ?').bind(id).first();
+    return keysToCamel(user);
 };
 
-export const getSensitiveUserById = async (db, id) => {
-    return await db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').bind(id).first();
+export const getUserByIdSensitive = async (db, id) => {
+    const user = await db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').bind(id).first();
+    return keysToCamel(user);
 };
 
-export const updateProfile = async (db, userId, { name, team, team_color }) => {
+export const updateProfile = async (db, userId, { name, team, teamColor }) => {
     return await db.prepare('UPDATE users SET name = ?, team = ?, team_color = ? WHERE id = ?')
-        .bind(name, team, team_color, userId)
+        .bind(name, team, teamColor, userId)
         .run();
 };
 
@@ -34,9 +59,9 @@ export const deleteUser = async (db, userId) => {
 }
 
 export const findOrCreateUser = async (db, googleUser, tokens) => {
-    let user = await getSensitiveUserById(db, googleUser.sub);
+    let user = await getUserByIdSensitive(db, googleUser.sub);
 
-    const expires_at = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString();
+    const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString();
 
     if (!user) {
         user = {
@@ -51,13 +76,13 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
             user.name,
             user.email,
             tokens.access_token,
-            expires_at,
+            expiresAt,
             tokens.refresh_token // This will be stored only on the first login
         ).run();
     } else {
         // User exists, update tokens. Refresh token is only sent on first approval, so only update it if we get a new one.
         const updateFields = ['google_access_token = ?', 'google_access_token_expires_at = ?'];
-        const params = [tokens.access_token, expires_at];
+        const params = [tokens.access_token, expiresAt];
 
         if (tokens.refresh_token) {
             updateFields.push('google_refresh_token = ?');
@@ -74,31 +99,32 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
 
 // VERY SENSITIVE, DO NOT EXPOSE REFRESH TOKEN
 export const getUserForRefresh = async (db, userId) => {
-    return await db.prepare('SELECT id, email, role, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
+    const user = await db.prepare('SELECT id, email, role, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
+    return keysToCamel(user);
 };
 
-export const updateUserTokens = async (db, userId, { access_token, expires_in }) => {
-    const expires_at = new Date(Date.now() + (expires_in * 1000)).toISOString();
+export const updateUserTokens = async (db, userId, accessToken, expiresIn) => {
+    const expiresAt = new Date(Date.now() + (expiresIn * 1000)).toISOString();
     return await db.prepare(
         'UPDATE users SET google_access_token = ?, google_access_token_expires_at = ? WHERE id = ?'
-    ).bind(access_token, expires_at, userId).run();
+    ).bind(accessToken, expiresAt, userId).run();
 };
 
 // --- Game Functions ---
 
-export const createGameRevision = async (db, { winner, loser, balls_remaining, fouled_on_black, date, author_id }) => {
-    const player1_id = winner < loser ? winner : loser;
-    const player2_id = winner < loser ? loser : winner;
+export const createGameRevision = async (db, { winner, loser, ballsRemaining, fouledOnBlack, date, authorId }) => {
+    const player1Id = winner < loser ? winner : loser;
+    const player2Id = winner < loser ? loser : winner;
 
     const latestRematch = await db.prepare(
         `SELECT rematch_id FROM game_revisions WHERE player1_id = ? AND player2_id = ? ORDER BY rematch_id DESC LIMIT 1`
-    ).bind(player1_id, player2_id).first();
-    const rematch_id = latestRematch ? latestRematch.rematch_id + 1 : 0;
+    ).bind(player1Id, player2Id).first();
+    const rematchId = latestRematch ? keysToCamel(latestRematch).rematchId + 1 : 0;
 
     return await db.prepare(
         `INSERT INTO game_revisions (player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(player1_id, player2_id, rematch_id, winner, balls_remaining, fouled_on_black, date, author_id, new Date().toISOString()).run();
+    ).bind(player1Id, player2Id, rematchId, winner, ballsRemaining, fouledOnBlack, date, authorId, new Date().toISOString()).run();
 };
 
 export const getGameList = async (db) => {
@@ -107,69 +133,66 @@ export const getGameList = async (db) => {
             SELECT *, ROW_NUMBER() OVER (PARTITION BY player1_id, player2_id, rematch_id ORDER BY revision_id DESC) as rn
             FROM game_revisions
         )
-        SELECT * FROM RankedRevisions WHERE rn = 1 ORDER BY played_at DESC, rematch_id DESC, player1_id, player2_id
+        SELECT * FROM RankedRevisions WHERE rn = 1 ORDER BY played_at DESC, player1_id, player2_id, rematch_id DESC
     `).all();
-    return results;
+    return keysToCamel(results);
 };
 
 export const getAuditLog = async (db) => {
     const { results } = await db.prepare('SELECT * FROM game_revisions ORDER BY authored_at DESC').all();
-    return results;
+    return keysToCamel(results);
 };
 
 export const getGameByCompositeId = async (db, player1Id, player2Id, rematchId) => {
-    return await db.prepare(
+    const game = await db.prepare(
       `SELECT * FROM game_revisions
        WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
        ORDER BY revision_id DESC
        LIMIT 1`
     ).bind(player1Id, player2Id, rematchId).first();
+    return keysToCamel(game);
 };
 
-export const updateGame = async (db, { player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id }) => {
-    const latestRevision = await db.prepare(
+export const updateGame = async (db, { player1Id, player2Id, rematchId, winnerId, ballsRemaining, fouledOnBlack, playedAt, authorId }) => {
+    const latestRevisionResult = await db.prepare(
         `SELECT revision_id FROM game_revisions
          WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
          ORDER BY revision_id DESC LIMIT 1`
-    ).bind(player1_id, player2_id, rematch_id).first();
+    ).bind(player1Id, player2Id, rematchId).first();
 
-    if (!latestRevision) {
+    if (!latestRevisionResult) {
         throw new Error('Cannot update a game that does not exist.');
     }
+    const latestRevision = keysToCamel(latestRevisionResult);
 
-    const newRevisionId = latestRevision.revision_id + 1;
+    const newRevisionId = latestRevision.revisionId + 1;
     return await db.prepare(
         `INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(newRevisionId, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, new Date().toISOString()).run();
+    ).bind(newRevisionId, player1Id, player2Id, rematchId, winnerId, ballsRemaining, fouledOnBlack, playedAt, authorId, new Date().toISOString()).run();
 };
 
 export const getLeaderboardStats = async (db) => {
-    const { results: games } = await db.prepare(`
-        WITH RankedRevisions AS (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY player1_id, player2_id, rematch_id ORDER BY revision_id DESC) as rn
-            FROM game_revisions
-        )
-        SELECT * FROM RankedRevisions WHERE rn = 1
-    `).all();
+    const games = await getGameList(db);
 
-    const { results: players } = await db.prepare('SELECT id FROM users').all();
-    const playerMap = new Map(players.map(p => [p.id, { wins: 0, losses: 0, balls_remaining: 0, fouls_on_black: 0 }]));
+    const { results } = await db.prepare('SELECT id FROM users').all();
+    const players = new Map(results.map(p => [p.id, { wins: 0, losses: 0, ballsRemaining: 0, foulsOnBlack: 0 }]));
 
     for (const game of games) {
-        const { player1_id, player2_id, winner_id, balls_remaining, fouled_on_black } = game;
-        const winner = winner_id === player1_id ? player1_id : player2_id;
-        const loser = winner_id === player1_id ? player2_id : player1_id;
+        const { player1Id, player2Id, winnerId, ballsRemaining, fouledOnBlack } = game;
+        const winner = winnerId;
+        const loser = winnerId === player1Id ? player2Id : player1Id;
 
-        if (playerMap.has(winner)) playerMap.get(winner).wins++;
-        if (playerMap.has(loser)) {
-            playerMap.get(loser).losses++;
-            playerMap.get(loser).balls_remaining += balls_remaining;
-            if (fouled_on_black) playerMap.get(loser).fouls_on_black++;
+        if (players.has(winner)) players.get(winner).wins++;
+        if (players.has(loser)) {
+            players.get(loser).losses++;
+            players.get(loser).ballsRemaining += ballsRemaining;
+            if (fouledOnBlack) players.get(loser).foulsOnBlack++;
         }
     }
-    return Array.from(playerMap.entries()).map(([playerId, stats]) => ({ playerId, ...stats }));
+    return Array.from(players.entries()).map(([playerId, stats]) => ({ playerId, ...stats }));
 };
+
 
 // --- Admin Functions ---
 
@@ -183,24 +206,24 @@ export const importGames = async (db, gamesToProcess) => {
             `SELECT revision_id FROM game_revisions
              WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
              ORDER BY revision_id DESC LIMIT 1`
-        ).bind(game.player1_id, game.player2_id, game.rematch_id).first();
+        ).bind(game.player1Id, game.player2Id, game.rematchId).first();
 
-        const newRevisionId = latestRevision ? latestRevision.revision_id + 1 : 0;
+        const newRevisionId = latestRevision ? latestRevision.revisionId + 1 : 0;
         
         return db.prepare(
             `INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             newRevisionId,
-            game.player1_id,
-            game.player2_id,
-            game.rematch_id,
-            game.winner_id,
-            game.balls_remaining,
-            game.fouled_on_black,
-            game.played_at,
-            game.author_id,
-            game.authored_at
+            game.player1Id,
+            game.player2Id,
+            game.rematchId,
+            game.winnerId,
+            game.ballsRemaining,
+            game.fouledOnBlack,
+            game.playedAt,
+            game.authorId,
+            game.authoredAt
         );
     }));
 
@@ -211,13 +234,12 @@ export const importGames = async (db, gamesToProcess) => {
 };
 
 
-
 // --- Archive Functions ---
 
 export const getArchivedLeaderboard = async (db, seasonId) => {
     const { results } = await db.prepare(`
         SELECT
-            a.player_id as playerId,
+            a.player_id,
             u.name,
             u.team,
             u.team_color,
@@ -230,7 +252,7 @@ export const getArchivedLeaderboard = async (db, seasonId) => {
         JOIN users u ON a.player_id = u.id
         WHERE a.season_id = ?
     `).bind(seasonId).all();
-    return results;
+    return keysToCamel(results);
 };
 
 export const getArchivedSeasonInfo = async (db, seasonId) => {
@@ -246,15 +268,15 @@ export const archiveSeason = async (db, seasonName) => {
 
     // 2. Process stats to calculate points
     const processedStats = leaderboardStats.map(playerStats => {
-        const points = playerStats.wins * 3 + playerStats.losses - playerStats.fouls_on_black;
+        const points = playerStats.wins * 3 + playerStats.losses - playerStats.foulsOnBlack;
         return { ...playerStats, points };
     });
 
     // 3. Create a new season entry and get its ID
     const seasonId = (await db.prepare(
-        'INSERT INTO archived_seasons (name) VALUES (?)'
-    ).bind(seasonName).run())
-    .meta.last_row_id;
+            'INSERT INTO archived_seasons (name) VALUES (?)'
+        ).bind(seasonName).run())
+        .meta.last_row_id;
 
     console.log(seasonId);
 
@@ -271,8 +293,8 @@ export const archiveSeason = async (db, seasonName) => {
             stats.points,
             stats.wins,
             stats.losses,
-            stats.fouls_on_black,
-            stats.balls_remaining
+            stats.foulsOnBlack,
+            stats.ballsRemaining
         );
     });
 

@@ -15,8 +15,8 @@ export const CustomizePage = () => {
                 </div>
                 
                 <div class="form-group">
-                    <label for="team_color">Team Colour</label>
-                    <input type="color" id="team_color" name="team_color" required />
+                    <label for="team-color">Team Colour</label>
+                    <input type="color" id="team-color" name="teamColor" required />
                 </div>
 
                 <button type="submit">Save Changes</button>

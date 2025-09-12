@@ -236,6 +236,12 @@ header nav a:hover, header nav a.active {
     transform-origin: 1px;
 }
 
+.loading, .error {
+    text-align: center;
+    font-size: 1.2em;
+    color: #666;
+}
+
 /* media max-width 650pz and portrait: */
 @media (max-width: 850px) {
     footer {

@@ -2,8 +2,8 @@
  * Fetches the list of all users and populates the dropdown selectors.
  */
 async function populatePlayerDropdown() {
-    const winnerSelect = document.getElementById('winner');
-    const loserSelect = document.getElementById('loser');
+    const winnerSelect = document.querySelector('#winner');
+    const loserSelect = document.querySelector('#loser');
 
     try {
         const response = await fetch('/api/users');
@@ -18,8 +18,8 @@ async function populatePlayerDropdown() {
             const option = document.createElement('option');
             option.value = user.id;
             option.textContent = `${user.name} (${user.team})`;
-            option.style.backgroundColor = user.team_color;
-            option.style.color = getContrastingTextColor(user.team_color);
+            option.style.backgroundColor = user.teamColor;
+            option.style.color = getContrastingTextColor(user.teamColor);
             optionsFragment.appendChild(option);
         });
 
@@ -36,19 +36,19 @@ async function populatePlayerDropdown() {
 
 // Set the date input to today by default
 function setDefaultDate() {
-    const dateInput = document.getElementById('game-date');
+    const dateInput = document.querySelector('#game-date');
     // Format to YYYY-MM-DD for the date input value
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
 }
 
 // Add a submit handler to the form
-document.getElementById('log-game-form').addEventListener('submit', async function(event) {
+document.querySelector('#log-game-form').addEventListener('submit', async function(event) {
     // Prevent the form from actually submitting to a server
     event.preventDefault(); 
-    
-    const winner = document.getElementById('winner').value;
-    const loser = document.getElementById('loser').value;
+
+    const winner = document.querySelector('#winner').value;
+    const loser = document.querySelector('#loser').value;
 
     if (winner === loser) {
         alert('Winner and Loser cannot be the same person!');
@@ -60,8 +60,8 @@ document.getElementById('log-game-form').addEventListener('submit', async functi
     
     // The checkbox value will be 'on' if checked, or null if not.
     // We can convert this to a proper boolean.
-    data.fouled_on_black = data.fouled_on_black === 'on';
-    data.balls_remaining = parseInt(data.balls_remaining, 10);
+    data.fouledOnBlack = data.fouledOnBlack === 'on';
+    data.ballsRemaining = parseInt(data.ballsRemaining, 10);
 
     console.log("Game Logged", data);
 

@@ -2,7 +2,7 @@
  * Fetches all data and populates the leaderboard table.
  */
 async function populateLeaderboard() {
-    const tableBody = document.getElementById('leaderboard-body');
+    const tableBody = document.querySelector('#leaderboard-body');
 
     try {
         // 1. Fetch the main leaderboard stats
@@ -12,7 +12,7 @@ async function populateLeaderboard() {
 
         // 2. Pre-process data to calculate points for sorting
         const processedData = leaderboardData.map(playerStats => {
-            const points = playerStats.wins * 3 + playerStats.losses - playerStats.fouls_on_black;
+            const points = playerStats.wins * 3 + playerStats.losses - playerStats.foulsOnBlack;
             return { ...playerStats, points }; // Add points to each player's object
         });
 
@@ -22,12 +22,12 @@ async function populateLeaderboard() {
             if (b.points !== a.points) {
                 return b.points - a.points;
             }
-            // Secondary sort: balls_remaining ascending
-            if (a.balls_remaining !== b.balls_remaining) {
-                return a.balls_remaining - b.balls_remaining;
+            // Secondary sort: ballsRemaining ascending
+            if (a.ballsRemaining !== b.ballsRemaining) {
+                return a.ballsRemaining - b.ballsRemaining;
             }
-            // Tertiary sort: fouls_on_black ascending
-            return a.fouls_on_black - b.fouls_on_black;
+            // Tertiary sort: foulsOnBlack ascending
+            return a.foulsOnBlack - b.foulsOnBlack;
         });
 
         // 4. Generate HTML rows from the sorted data
@@ -44,7 +44,7 @@ async function populateLeaderboard() {
             const played = playerStats.wins + playerStats.losses;
             // Handle division by zero for the win/loss ratio
             const winLossRatio = playerStats.losses > 0 ? (playerStats.wins / playerStats.losses).toFixed(2) : (playerStats.wins > 0 ? "∞" : "0.00");
-            const color = userData.team_color || '#ffffff'; // Default to white if no color
+            const color = userData.teamColor || '#ffffff'; // Default to white if no color
             const textColor = getContrastingTextColor(color);
 
             // Create the HTML for the table row
@@ -55,8 +55,8 @@ async function populateLeaderboard() {
                     <td><div class="table-cell">{{= it.points }}</div></td>
                     <td><div class="table-cell">{{= it.wins }}</div></td>
                     <td><div class="table-cell">{{= it.losses }}</div></td>
-                    <td><div class="table-cell">{{= it.fouls_on_black }}</div></td>
-                    <td><div class="table-cell">{{= it.balls_remaining }}</div></td>
+                    <td><div class="table-cell">{{= it.foulsOnBlack }}</div></td>
+                    <td><div class="table-cell">{{= it.ballsRemaining }}</div></td>
                     <td><div class="table-cell">{{= it.played }}</div></td>
                     <td><div class="table-cell">{{= it.winLossRatio }}</div></td>
                 </tr>

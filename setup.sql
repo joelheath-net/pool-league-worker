@@ -17,12 +17,12 @@ CREATE TABLE IF NOT EXISTS game_revisions (
     rematch_id       INTEGER   NOT NULL,
     winner_id        TEXT      NOT NULL,
 
-    revision_id      INTEGER   NOT NULL   DEFAULT 0,
+    revision_id      INTEGER   NOT NULL  DEFAULT 0,
     author_id        TEXT      NOT NULL,
-    authored_at      DATETIME  NOT NULL   DEFAULT CURRENT_TIMESTAMP,
+    authored_at      DATETIME  NOT NULL  DEFAULT CURRENT_TIMESTAMP,
 
     balls_remaining  INTEGER   NOT NULL,
-    fouled_on_black  BOOLEAN   NOT NULL   CHECK (fouled_on_black IN (0, 1)),
+    fouled_on_black  BOOLEAN   NOT NULL  CHECK (fouled_on_black IN (0, 1)),
     played_at        DATETIME  NOT NULL,
 
     PRIMARY KEY (player1_id, player2_id, rematch_id, revision_id),
@@ -33,10 +33,12 @@ CREATE TABLE IF NOT EXISTS game_revisions (
     FOREIGN KEY (winner_id)  REFERENCES users(id) ON DELETE CASCADE
 );
 
+
 CREATE TABLE IF NOT EXISTS archived_seasons (
     id    INTEGER  PRIMARY KEY  AUTOINCREMENT,
     name  TEXT     NOT NULL
 );
+
 
 CREATE TABLE IF NOT EXISTS archived_tables (
     season_id        INTEGER  NOT NULL,

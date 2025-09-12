@@ -29,7 +29,7 @@ admin.post('/delete-user/:id', async (c) => {
 admin.post('/import-games', async (c) => {
     const tsvData = await c.req.text();
     const userPayload = await c.get('user');
-    const author_id = userPayload.sub;
+    const authorId = userPayload.sub;
 
     const lines = tsvData.trim().split(/\r?\n/);
     const header = lines.shift().split('\t').map(h => h.trim());
@@ -48,38 +48,38 @@ admin.post('/import-games', async (c) => {
     for (const line of lines) {
         const values = line.split('\t').map(v => v.trim());
 
-        const winner_id = values[colMap.winnerId];
-        const loser_id = values[colMap.loserId];
+        const winnerId = values[colMap.winnerId];
+        const loserId = values[colMap.loserId];
         
-        if (!winner_id || !loser_id) continue;
+        if (!winnerId || !loserId) continue;
 
-        const player1_id = winner_id < loser_id ? winner_id : loser_id;
-        const player2_id = winner_id < loser_id ? loser_id : winner_id;
+        const player1Id = winnerId < loserId ? winnerId : loserId;
+        const player2Id = winnerId < loserId ? loserId : winnerId;
 
-        const rematch_id = parseInt(values[colMap.rematchRound] || '1', 10) - 1;
-        const balls_remaining = parseInt(values[colMap.ballsRemaining] || '0', 10);
-        const fouled_on_black = (values[colMap.fouled] || 'FALSE').toUpperCase() === 'TRUE';
+        const rematchId = parseInt(values[colMap.rematchRound] || '1', 10) - 1;
+        const ballsRemaining = parseInt(values[colMap.ballsRemaining] || '0', 10);
+        const fouledOnBlack = (values[colMap.fouled] || 'FALSE').toUpperCase() === 'TRUE';
         
-        let played_at = new Date('2000-01-01').toISOString();
+        let playedAt = new Date('2000-01-01').toISOString();
         if (values[colMap.date]) {
             // Handles 'DD/MM/YYYY' format
             const dateParts = values[colMap.date].split(/[\s/]/); // split by space or slash
             if (dateParts.length >= 3) {
                  const [day, month, year] = dateParts;
-                 played_at = new Date(`${year}-${month}-${day}`).toISOString();
+                 playedAt = new Date(`${year}-${month}-${day}`).toISOString();
             }
         }
 
         gamesToProcess.push({
-            player1_id,
-            player2_id,
-            rematch_id,
-            winner_id,
-            balls_remaining,
-            fouled_on_black,
-            played_at,
-            author_id,
-            authored_at: new Date().toISOString()
+            player1Id,
+            player2Id,
+            rematchId,
+            winnerId,
+            ballsRemaining,
+            fouledOnBlack,
+            playedAt,
+            authorId,
+            authoredAt: new Date().toISOString()
         });
     }
     

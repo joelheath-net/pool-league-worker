@@ -12,10 +12,10 @@ auth.get('/google/login', (c) => {
     const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     
     const currentUrl = new URL(c.req.url);
-    const redirect_uri = `${currentUrl.origin}/auth/google/callback`;
+    const redirectUri = `${currentUrl.origin}/auth/google/callback`;
 
     googleAuthUrl.searchParams.set('client_id', c.env.GOOGLE_CLIENT_ID);
-    googleAuthUrl.searchParams.set('redirect_uri', redirect_uri);
+    googleAuthUrl.searchParams.set('redirect_uri', redirectUri);
     googleAuthUrl.searchParams.set('response_type', 'code');
     googleAuthUrl.searchParams.set('scope', 'openid profile email');
     googleAuthUrl.searchParams.set('access_type', 'offline');
@@ -37,7 +37,7 @@ auth.get('/google/callback', async (c) => {
     }
 
     const currentUrl = new URL(c.req.url);
-    const redirect_uri = `${currentUrl.origin}/auth/google/callback`;
+    const redirectUri = `${currentUrl.origin}/auth/google/callback`;
 
     try {
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -47,7 +47,7 @@ auth.get('/google/callback', async (c) => {
                 code: code,
                 client_id: c.env.GOOGLE_CLIENT_ID,
                 client_secret: c.env.GOOGLE_CLIENT_SECRET,
-                redirect_uri: redirect_uri,
+                redirect_uri: redirectUri,
                 grant_type: 'authorization_code'
             })
         });

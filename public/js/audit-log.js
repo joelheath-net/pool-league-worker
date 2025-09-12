@@ -2,7 +2,7 @@
  * Fetches all revisions and users, then populates the audit log.
  */
 async function populateAuditLog() {
-    const container = document.getElementById('audit-log-container');
+    const container = document.querySelector('#audit-log-container');
 
     try {
         // 1. Fetch users and log data in parallel
@@ -26,21 +26,21 @@ async function populateAuditLog() {
 
         // 2. Process each log entry and create its HTML card
         const entriesHtml = auditLog.map(rev => {
-            const author = userMap.get(rev.author_id) || { name: 'Unknown', email: 'N/A' };
-            const player1 = userMap.get(rev.player1_id) || { name: 'Unknown' };
-            const player2 = userMap.get(rev.player2_id) || { name: 'Unknown' };
-            const winner = userMap.get(rev.winner_id) || { name: 'Unknown' };
+            const author = userMap.get(rev.authorId) || { name: 'Unknown', email: 'N/A' };
+            const player1 = userMap.get(rev.player1Id) || { name: 'Unknown' };
+            const player2 = userMap.get(rev.player2Id) || { name: 'Unknown' };
+            const winner = userMap.get(rev.winnerId) || { name: 'Unknown' };
 
 
             // Format data for display
-            const actionText = rev.revision_id === 0 
-                ? 'created a new record' 
+            const actionText = rev.revisionId === 0
+                ? 'created a new record'
                 : 'updated an existing record';
-            
-            const authoredDate = new Date(rev.authored_at).toLocaleString('en-GB');
-            const playedDate = new Date(rev.played_at).toLocaleDateString('en-GB');
-            const rematchText = rev.rematch_id === 0 ? 'First Match' : eta.render(`Rematch {{= it.rematch_id }}`, rev);
-            const fouledText = rev.fouled_on_black ? 'Yes' : 'No';
+
+            const authoredDate = new Date(rev.authoredAt).toLocaleString('en-GB');
+            const playedDate = new Date(rev.playedAt).toLocaleDateString('en-GB');
+            const rematchText = rev.rematchId === 0 ? 'First Match' : eta.render(`Rematch {{= it.rematchId }}`, rev);
+            const fouledText = rev.fouledOnBlack ? 'Yes' : 'No';
 
             return eta.render(html`
                 <div class="audit-entry">
@@ -53,7 +53,7 @@ async function populateAuditLog() {
                         <ul>
                             <li><strong>Winner:</strong> {{= it.winner.name }}</li>
                             <li><strong>Date Played:</strong> {{= it.playedDate }}</li>
-                            <li><strong>Balls Remaining:</strong> {{= it.rev.balls_remaining }}</li>
+                            <li><strong>Balls Remaining:</strong> {{= it.rev.ballsRemaining }}</li>
                             <li><strong>Fouled on Black:</strong> {{= it.fouledText }}</li>
                         </ul>
                     </div>

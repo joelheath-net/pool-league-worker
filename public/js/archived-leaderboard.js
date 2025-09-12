@@ -1,8 +1,8 @@
 async function populateArchive() {
     const container = document.querySelector('.container');
     const seasonId = container.dataset.seasonId;
-    const tableBody = document.getElementById('archive-body');
-    const seasonNameEl = document.getElementById('season-name');
+    const tableBody = document.querySelector('#archive-body');
+    const seasonNameEl = document.querySelector('#season-name');
 
     try {
         const response = await fetch(`/api/archive/${seasonId}`);
@@ -15,7 +15,7 @@ async function populateArchive() {
         leaderboard.sort((a, b) => b.points - a.points);
 
         const rowsHtml = leaderboard.map(playerStats => {
-            const color = playerStats.team_color || '#ffffff';
+            const color = playerStats.teamColor || '#ffffff';
             const textColor = getContrastingTextColor(color);
             const winLossRatio = playerStats.losses > 0 ? (playerStats.wins / playerStats.losses).toFixed(2) : (playerStats.wins > 0 ? "∞" : "0.00");
 
@@ -26,8 +26,8 @@ async function populateArchive() {
                     <td><div class="table-cell">{{= it.points }}</div></td>
                     <td><div class="table-cell">{{= it.wins }}</div></td>
                     <td><div class="table-cell">{{= it.losses }}</div></td>
-                    <td><div class="table-cell">{{= it.fouls_on_black }}</div></td>
-                    <td><div class="table-cell">{{= it.balls_remaining }}</div></td>
+                    <td><div class="table-cell">{{= it.foulsOnBlack }}</div></td>
+                    <td><div class="table-cell">{{= it.ballsRemaining }}</div></td>
                     <td><div class="table-cell">{{= it.winLossRatio }}</div></td>
                 </tr>
             `, { ...playerStats, color, textColor, winLossRatio });

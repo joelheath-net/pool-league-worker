@@ -1,5 +1,5 @@
 async function populatePlayerDropdown() {
-    const playerSelect = document.getElementById('player');
+    const playerSelect = document.querySelector('#player');
 
     try {
         const response = await fetch('/api/users');
@@ -14,8 +14,8 @@ async function populatePlayerDropdown() {
             const option = document.createElement('option');
             option.value = user.id;
             option.textContent = `${user.name} (${user.team})`;
-            option.style.backgroundColor = user.team_color;
-            option.style.color = getContrastingTextColor(user.team_color);
+            option.style.backgroundColor = user.teamColor;
+            option.style.color = getContrastingTextColor(user.teamColor);
             optionsFragment.appendChild(option);
         });
 
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const importGamesButton = document.querySelector('#import-games-button');
     if (importGamesButton) {
         importGamesButton.addEventListener('click', async () => {
-            const tsvData = document.getElementById('import-data-textarea').value;
+            const tsvData = document.querySelector('#import-data-textarea').value;
             if (!tsvData.trim()) {
                 return alert('Please paste data into the text box.');
             }
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     alert(`Successfully imported ${result.importedCount} games.`);
-                    document.getElementById('import-data-textarea').value = ''; // Clear the text area
+                    document.querySelector('#import-data-textarea').value = ''; // Clear the text area
                 } catch (error) {
                     console.error('Error importing games:', error);
                     alert(`An error occurred while importing games: ${error.message}`);
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const archiveSeasonButton = document.querySelector('#archive-season-button');
     if (archiveSeasonButton) {
         archiveSeasonButton.addEventListener('click', async () => {
-            const seasonName = document.getElementById('season-name').value;
+            const seasonName = document.querySelector('#season-name').value;
             if (!seasonName.trim()) {
                 return alert('Please enter a name for the season before archiving.');
             }

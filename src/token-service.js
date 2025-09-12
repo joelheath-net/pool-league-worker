@@ -13,7 +13,7 @@ export const performTokenRefresh = async (c, userId) => {
 
     const user = await getUserForRefresh(c.env.DB, userId);
 
-    if (!user || !user.google_refresh_token) {
+    if (!user || !user.googleRefreshToken) {
         console.error(`[TOKEN-SERVICE] Refresh failed: No refresh token found in DB for user ${userId}.`);
         return { message: 'NO_REFRESH_TOKEN', jwt: null };
     }
@@ -25,7 +25,7 @@ export const performTokenRefresh = async (c, userId) => {
             body: JSON.stringify({
                 client_id: c.env.GOOGLE_CLIENT_ID,
                 client_secret: c.env.GOOGLE_CLIENT_SECRET,
-                refresh_token: user.google_refresh_token,
+                refresh_token: user.googleRefreshToken,
                 grant_type: 'refresh_token',
             }),
         });
@@ -37,10 +37,7 @@ export const performTokenRefresh = async (c, userId) => {
             return { message: 'GOOGLE_API_ERROR', jwt: null };
         }
 
-        await updateUserTokens(c.env.DB, userId, {
-            access_token: tokenData.access_token,
-            expires_in: tokenData.expires_in,
-        });
+        await updateUserTokens(c.env.DB, userId, tokenData.access_token, tokenData.expires_in);
 
         const newPayload = {
             sub: userId,

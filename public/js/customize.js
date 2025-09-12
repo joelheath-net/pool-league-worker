@@ -2,10 +2,10 @@
  * Fetches the current user profile and populates the form fields.
  */
 async function loadProfile() {
-    const nameInput = document.getElementById('name');
-    const teamInput = document.getElementById('team');
-    const colorInput = document.getElementById('team_color');
-    const form = document.getElementById('profile-form');
+    const nameInput = document.querySelector('#name');
+    const teamInput = document.querySelector('#team');
+    const colorInput = document.querySelector('#team-color');
+    const form = document.querySelector('#profile-form');
 
     try {
         const response = await fetch('/api/profile');
@@ -15,7 +15,7 @@ async function loadProfile() {
         // Populate the form with the fetched data
         nameInput.value = profile.name;
         teamInput.value = profile.team;
-        colorInput.value = profile.team_color;
+        colorInput.value = profile.teamColor;
 
     } catch (error) {
         console.error("Error loading profile:", error);
@@ -24,7 +24,7 @@ async function loadProfile() {
 }
 
 // Add a submit handler to the form
-document.getElementById('profile-form').addEventListener('submit', async function(event) {
+document.querySelector('#profile-form').addEventListener('submit', async function(event) {
     // Prevent the default form submission behavior
     event.preventDefault(); 
     
