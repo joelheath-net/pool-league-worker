@@ -3,14 +3,14 @@ import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { sign, decode } from 'hono/jwt';
 import { findOrCreateUser } from './database.js';
 import { performTokenRefresh } from './token-service.js';
-import {accessTokenExpiresIn, refreshTokenExpiresIn} from './token-service.js';
+import { accessTokenExpiresIn, refreshTokenExpiresIn } from './token-service.js';
 
 const auth = new Hono();
 
 // Route to start the OAuth flow
 auth.get('/google/login', (c) => {
     const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    
+
     const currentUrl = new URL(c.req.url);
     const redirectUri = `${currentUrl.origin}/auth/google/callback`;
 
@@ -19,7 +19,7 @@ auth.get('/google/login', (c) => {
     googleAuthUrl.searchParams.set('response_type', 'code');
     googleAuthUrl.searchParams.set('scope', 'openid profile email');
     googleAuthUrl.searchParams.set('access_type', 'offline');
-    
+
     const reconsentNeeded = getCookie(c, 'reconsent_needed');
     if (reconsentNeeded) {
         googleAuthUrl.searchParams.set('prompt', 'consent');
@@ -57,10 +57,10 @@ auth.get('/google/callback', async (c) => {
             console.error('Failed to fetch access token:', tokens);
             return c.text('Failed to obtain access token.', 500);
         }
-        
+
         const idTokenPayload = decode(tokens.id_token).payload;
 
-        const whitelist = (c.env.EMAIL_WHITELIST || '');
+        const whitelist = c.env.EMAIL_WHITELIST || '';
         if (whitelist && !whitelist.split(',').includes(idTokenPayload.email)) {
             return c.redirect('/');
         }
@@ -71,20 +71,19 @@ auth.get('/google/callback', async (c) => {
             sub: user.id,
             email: user.email,
             role: user.role,
-            exp: Math.floor(Date.now() / 1000) + accessTokenExpiresIn,
+            exp: Math.floor(Date.now() / 1000) + accessTokenExpiresIn
         };
         const jwt = await sign(payload, c.env.JWT_SECRET);
-        
+
         setCookie(c, 'auth_token', jwt, {
             path: '/',
             secure: true,
             httpOnly: true,
             maxAge: refreshTokenExpiresIn,
-            sameSite: 'Lax',
+            sameSite: 'Lax'
         });
 
         return c.redirect('/');
-
     } catch (error) {
         console.error('OAuth callback error:', error);
         return c.text('An error occurred during authentication.', 500);
@@ -103,10 +102,10 @@ auth.post('/refresh', async (c) => {
     } catch (e) {
         return c.json({ message: 'Invalid token' }, 401);
     }
-    
+
     const userId = payload?.sub;
     const refreshed = await performTokenRefresh(c, userId);
-    
+
     if (refreshed) {
         return c.json({ message: 'Token refreshed' });
     } else {
@@ -116,9 +115,7 @@ auth.post('/refresh', async (c) => {
 });
 
 auth.get('/logout', (c) => {
-    deleteCookie(c, 'auth_token', {
-        path: '/',
-    });
+    deleteCookie(c, 'auth_token', { path: '/' });
     return c.redirect('/');
 });
 

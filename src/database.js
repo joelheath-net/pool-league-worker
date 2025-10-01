@@ -69,8 +69,9 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
             name: googleUser.name,
             email: googleUser.email,
         };
-        await db.prepare(
-            'INSERT INTO users (id, name, email, google_access_token, google_access_token_expires_at, google_refresh_token) VALUES (?, ?, ?, ?, ?, ?)'
+        await db.prepare(`
+            INSERT INTO users (id, name, email, google_access_token, google_access_token_expires_at, google_refresh_token)
+            VALUES (?, ?, ?, ?, ?, ?)`
         ).bind(
             user.id,
             user.name,
@@ -117,13 +118,13 @@ export const createGameRevision = async (db, { winner, loser, ballsRemaining, fo
     const player2Id = winner < loser ? loser : winner;
 
     const latestRematch = await db.prepare(
-        `SELECT rematch_id FROM game_revisions WHERE player1_id = ? AND player2_id = ? ORDER BY rematch_id DESC LIMIT 1`
+        'SELECT rematch_id FROM game_revisions WHERE player1_id = ? AND player2_id = ? ORDER BY rematch_id DESC LIMIT 1'
     ).bind(player1Id, player2Id).first();
     const rematchId = latestRematch ? keysToCamel(latestRematch).rematchId + 1 : 0;
 
-    return await db.prepare(
-        `INSERT INTO game_revisions (player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    return await db.prepare(`
+        INSERT INTO game_revisions (player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(player1Id, player2Id, rematchId, winner, ballsRemaining, fouledOnBlack, date, authorId, new Date().toISOString()).run();
 };
 
@@ -144,20 +145,20 @@ export const getAuditLog = async (db) => {
 };
 
 export const getGameByCompositeId = async (db, player1Id, player2Id, rematchId) => {
-    const game = await db.prepare(
-      `SELECT * FROM game_revisions
-       WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-       ORDER BY revision_id DESC
-       LIMIT 1`
+    const game = await db.prepare(`
+        SELECT * FROM game_revisions
+        WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
+        ORDER BY revision_id DESC
+        LIMIT 1`
     ).bind(player1Id, player2Id, rematchId).first();
     return keysToCamel(game);
 };
 
 export const updateGame = async (db, { player1Id, player2Id, rematchId, winnerId, ballsRemaining, fouledOnBlack, playedAt, authorId }) => {
-    const latestRevisionResult = await db.prepare(
-        `SELECT revision_id FROM game_revisions
-         WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-         ORDER BY revision_id DESC LIMIT 1`
+    const latestRevisionResult = await db.prepare(`
+        SELECT revision_id FROM game_revisions
+        WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
+        ORDER BY revision_id DESC LIMIT 1`
     ).bind(player1Id, player2Id, rematchId).first();
 
     if (!latestRevisionResult) {
@@ -166,9 +167,9 @@ export const updateGame = async (db, { player1Id, player2Id, rematchId, winnerId
     const latestRevision = keysToCamel(latestRevisionResult);
 
     const newRevisionId = latestRevision.revisionId + 1;
-    return await db.prepare(
-        `INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    return await db.prepare(`
+        INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(newRevisionId, player1Id, player2Id, rematchId, winnerId, ballsRemaining, fouledOnBlack, playedAt, authorId, new Date().toISOString()).run();
 };
 
@@ -202,17 +203,17 @@ export const resetGames = async (db) => {
 
 export const importGames = async (db, gamesToProcess) => {
     const statements = await Promise.all(gamesToProcess.map(async (game) => {
-        const latestRevision = await db.prepare(
-            `SELECT revision_id FROM game_revisions
-             WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-             ORDER BY revision_id DESC LIMIT 1`
+        const latestRevision = await db.prepare(`
+            SELECT revision_id FROM game_revisions
+            WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
+            ORDER BY revision_id DESC LIMIT 1`
         ).bind(game.player1Id, game.player2Id, game.rematchId).first();
 
         const newRevisionId = latestRevision ? latestRevision.revisionId + 1 : 0;
         
-        return db.prepare(
-            `INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        return db.prepare(`
+            INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             newRevisionId,
             game.player1Id,
@@ -250,8 +251,8 @@ export const getArchivedLeaderboard = async (db, seasonId) => {
             a.points
         FROM archived_tables a
         JOIN users u ON a.player_id = u.id
-        WHERE a.season_id = ?
-    `).bind(seasonId).all();
+        WHERE a.season_id = ?`
+    ).bind(seasonId).all();
     return keysToCamel(results);
 };
 
@@ -284,9 +285,9 @@ export const archiveSeason = async (db, seasonName) => {
 
     // 4. Prepare statements to insert leaderboard data
     const insertStatements = processedStats.map(stats => {
-        return db.prepare(
-            `INSERT INTO archived_tables (season_id, player_id, points, wins, losses, fouls_on_black, balls_remaining)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        return db.prepare(`
+            INSERT INTO archived_tables (season_id, player_id, points, wins, losses, fouls_on_black, balls_remaining)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             seasonId,
             stats.playerId,

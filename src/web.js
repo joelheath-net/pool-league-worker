@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { authContextMiddleware, protectWeb, protectAdminWeb } from './middleware';
+import { protectWeb, protectAdminWeb } from './middleware';
 
 import { Layout } from '../views/layout';
 import { LeaderboardPage } from '../views/leaderboard';

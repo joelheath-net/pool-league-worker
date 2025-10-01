@@ -1,7 +1,6 @@
 import { getCookie, setCookie } from 'hono/cookie';
 import { verify, decode } from 'hono/jwt';
 import { performTokenRefresh } from './token-service.js';
-import * as db from './database.js';
 
 /**
  * THIS IS THE NEW CENTRAL MIDDLEWARE.
