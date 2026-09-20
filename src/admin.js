@@ -106,4 +106,19 @@ admin.post('/archive-season', async (c) => {
     }
 });
 
+admin.post('/update-participation', async (c) => {
+    try {
+        const { participations } = await c.req.json();
+        if (!Array.isArray(participations)) {
+            return c.json({ error: 'Invalid participations data format. Expected array of { id, participating }' }, 400);
+        }
+
+        const updatedCount = await db.updateUsersParticipation(c.env.DB, participations);
+        return c.json({ message: 'Participation updated successfully', updatedCount });
+    } catch (error) {
+        console.error('Error updating participation:', error);
+        return c.json({ error: error.message || 'Failed to update participation' }, 500);
+    }
+});
+
 export default admin;

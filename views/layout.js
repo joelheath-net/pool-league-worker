@@ -42,6 +42,7 @@ const Header = ({ isAuthenticated, isAdmin }) => {
             <a href="/log-game">Record New Game</a>
             <a href="/game-list">View Games List</a>
             <a href="/audit-log">View Audit Log</a>
+            <a href="/seasons">Season Archive</a>
             ${isAdmin
                 ? html`<a href="/admin-panel">Admin Dashboard</a>`
                 : ''}
@@ -53,6 +54,7 @@ const Header = ({ isAuthenticated, isAdmin }) => {
     const unauthenticatedNav = html`
         <nav>
             <a href="/game-list">View Games List</a>
+            <a href="/seasons">Season Archive</a>
             <a href="/auth/google/login">Sign In</a>
         </nav>
     `;
@@ -73,7 +75,7 @@ const Header = ({ isAuthenticated, isAdmin }) => {
 };
 
 export const Layout = (props) => {
-    const cutoff = props.isAdmin ? "1130px" : props.isAuthenticated ? "950px" : "500px";
+    const cutoff = props.isAdmin ? "1250px" : props.isAuthenticated ? "1080px" : "600px";
     const style = props.style ? html`<link rel="stylesheet" href="${props.style}" />` : '';
     const script = props.script ? html`<script src="${props.script}"></script>` : '';
 

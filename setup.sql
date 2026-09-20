@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     role                             TEXT             DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'admin')),
     team                             TEXT             DEFAULT 'My Team' NOT NULL,
     team_color                       TEXT             DEFAULT '#ffffff' NOT NULL,
+    participating                    BOOLEAN          DEFAULT 1 NOT NULL CHECK (participating IN (0, 1)),
     google_refresh_token             TEXT,
     google_access_token              TEXT,
     google_access_token_expires_at   DATETIME

@@ -249,3 +249,116 @@ header nav a:hover, header nav a.active {
         align-items: center;
     }
 }
+
+/* Badges */
+.badge-friendly {
+    display: inline-block;
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.badge-inactive {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-style: italic;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.friendly-row {
+    opacity: 0.92;
+}
+
+/* Seasons Archive */
+.seasons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 10px 0;
+}
+
+.season-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff;
+    padding: 18px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease-in-out;
+}
+
+.season-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    border-color: #007bff;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.season-card.current-season {
+    border-left: 5px solid #28a745;
+}
+
+.season-card-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.season-card-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.badge-active-season {
+    display: inline-block;
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-archived-season {
+    display: inline-block;
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.season-card-arrow {
+    font-size: 1.25rem;
+    color: #007bff;
+    font-weight: bold;
+    transition: transform 0.2s ease-in-out;
+}
+
+.season-card:hover .season-card-arrow {
+    transform: translateX(4px);
+}

@@ -10,6 +10,7 @@ import { CustomizePage } from '../views/customize';
 import { EditGamePage } from '../views/edit-game';
 import { AdminPage } from '../views/admin-panel';
 import { ArchivedLeaderboardPage } from '../views/archived-leaderboard';
+import { SeasonsPage } from '../views/seasons';
 
 
 const web = new Hono();
@@ -38,6 +39,14 @@ web.get('/', (c) => {
 
 web.get('/game-list', (c) => {
     return c.render(<GamesPage isAuthenticated={c.get('isAuthenticated')} />, { title: 'Game History', script: '/js/game-list.js' });
+});
+
+web.get('/seasons', (c) => {
+    return c.render(<SeasonsPage />, { title: 'Season Archive', script: '/js/seasons.js' });
+});
+
+web.get('/archive', (c) => {
+    return c.redirect('/seasons');
 });
 
 web.get('/archive/:seasonId', (c) => {

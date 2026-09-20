@@ -28,8 +28,46 @@ async function populatePlayerDropdown() {
     }
 }
 
+async function populateParticipationTable() {
+    const tableBody = document.querySelector('#participation-body');
+    if (!tableBody) return;
+
+    try {
+        const response = await fetch('/api/users');
+        if (!response.ok) throw new Error('Failed to fetch user list');
+        const users = await response.json();
+
+        if (users.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><div class="table-cell">No users registered yet.</div></td></tr>';
+            return;
+        }
+
+        const rowsHtml = users.map(user => {
+            const color = user.teamColor || '#ffffff';
+            const textColor = getContrastingTextColor(color);
+            return eta.render(html`
+                <tr>
+                    <td style="background-color: {{= it.color }};"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.name }}</div></td>
+                    <td style="background-color: {{= it.color }};"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.team }}</div></td>
+                    <td style="text-align: center;">
+                        <div class="table-cell">
+                            <input type="checkbox" class="user-participating-checkbox" data-user-id="{{= it.id }}" {{= it.participating ? 'checked' : '' }} />
+                        </div>
+                    </td>
+                </tr>
+            `, { ...user, color, textColor });
+        }).join('');
+
+        tableBody.innerHTML = rowsHtml;
+    } catch (error) {
+        console.error('Error populating participation table:', error);
+        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><div class="table-cell">Error loading players.</div></td></tr>';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     populatePlayerDropdown();
+    populateParticipationTable();
     
     const resetDbButton = document.querySelector('#reset-db-button');
     if (resetDbButton) {
@@ -151,6 +189,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Error archiving season:', error);
                     alert(`An error occurred while archiving the season: ${error.message}`);
                 }
+            }
+        });
+    }
+
+    const selectAllBtn = document.querySelector('#select-all-participation');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            document.querySelectorAll('.user-participating-checkbox').forEach(cb => cb.checked = true);
+        });
+    }
+
+    const deselectAllBtn = document.querySelector('#deselect-all-participation');
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', () => {
+            document.querySelectorAll('.user-participating-checkbox').forEach(cb => cb.checked = false);
+        });
+    }
+
+    const saveParticipationBtn = document.querySelector('#save-participation-button');
+    if (saveParticipationBtn) {
+        saveParticipationBtn.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.user-participating-checkbox');
+            const participations = Array.from(checkboxes).map(cb => ({
+                id: cb.dataset.userId,
+                participating: cb.checked
+            }));
+
+            saveParticipationBtn.disabled = true;
+            saveParticipationBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/admin/update-participation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ participations })
+                });
+
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to save participation changes');
+                }
+
+                alert('Player participation updated successfully.');
+            } catch (error) {
+                console.error('Error saving participation changes:', error);
+                alert(`An error occurred while saving: ${error.message}`);
+            } finally {
+                saveParticipationBtn.disabled = false;
+                saveParticipationBtn.textContent = 'Save Participation Changes';
             }
         });
     }

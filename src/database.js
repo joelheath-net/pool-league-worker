@@ -23,9 +23,14 @@ const keysToCamel = (obj) => {
 
 // --- User Functions ---
 
-export const getUsers = async (db) => {
-    const { results } = await db.prepare('SELECT id, name, team, team_color FROM users').all();
-    return keysToCamel(results);
+export const getUsers = async (db, { participatingOnly = false } = {}) => {
+    let query = 'SELECT id, name, team, team_color, participating FROM users';
+    if (participatingOnly) {
+        query += ' WHERE participating = 1';
+    }
+    query += ' ORDER BY name COLLATE NOCASE ASC';
+    const { results } = await db.prepare(query).all();
+    return keysToCamel(results).map(u => ({ ...u, participating: Boolean(u.participating) }));
 };
 
 export const getSensitiveUsers = async (db) => {
@@ -39,8 +44,10 @@ export const userExists = async (db, id) => {
 }
 
 export const getUserById = async (db, id) => {
-    const user = await db.prepare('SELECT id, name, team, team_color FROM users WHERE id = ?').bind(id).first();
-    return keysToCamel(user);
+    const user = await db.prepare('SELECT id, name, team, team_color, participating FROM users WHERE id = ?').bind(id).first();
+    const camel = keysToCamel(user);
+    if (camel) camel.participating = Boolean(camel.participating);
+    return camel;
 };
 
 export const getUserByIdSensitive = async (db, id) => {
@@ -70,8 +77,8 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
             email: googleUser.email,
         };
         await db.prepare(`
-            INSERT INTO users (id, name, email, google_access_token, google_access_token_expires_at, google_refresh_token)
-            VALUES (?, ?, ?, ?, ?, ?)`
+            INSERT INTO users (id, name, email, google_access_token, google_access_token_expires_at, google_refresh_token, participating)
+            VALUES (?, ?, ?, ?, ?, ?, 1)`
         ).bind(
             user.id,
             user.name,
@@ -176,11 +183,17 @@ export const updateGame = async (db, { player1Id, player2Id, rematchId, winnerId
 export const getLeaderboardStats = async (db) => {
     const games = await getGameList(db);
 
-    const { results } = await db.prepare('SELECT id FROM users').all();
+    const { results } = await db.prepare('SELECT id FROM users WHERE participating = 1').all();
     const players = new Map(results.map(p => [p.id, { wins: 0, losses: 0, ballsRemaining: 0, foulsOnBlack: 0 }]));
 
     for (const game of games) {
         const { player1Id, player2Id, winnerId, ballsRemaining, fouledOnBlack } = game;
+
+        // Games involving any non-participating player are not included in leaderboard tallies
+        if (!players.has(player1Id) || !players.has(player2Id)) {
+            continue;
+        }
+
         const winner = winnerId;
         const loser = winnerId === player1Id ? player2Id : player1Id;
 
@@ -196,6 +209,16 @@ export const getLeaderboardStats = async (db) => {
 
 
 // --- Admin Functions ---
+
+export const updateUsersParticipation = async (db, participations) => {
+    const statements = participations.map(p =>
+        db.prepare('UPDATE users SET participating = ? WHERE id = ?').bind(p.participating ? 1 : 0, p.id)
+    );
+    if (statements.length > 0) {
+        await db.batch(statements);
+    }
+    return statements.length;
+};
 
 export const resetGames = async (db) => {
     return await db.prepare('DELETE FROM game_revisions').run();
@@ -257,7 +280,12 @@ export const getArchivedLeaderboard = async (db, seasonId) => {
 
 export const getArchivedSeasonInfo = async (db, seasonId) => {
     return await db.prepare('SELECT id, name FROM archived_seasons WHERE id = ?').bind(seasonId).first();
-}
+};
+
+export const getArchivedSeasons = async (db) => {
+    const { results } = await db.prepare('SELECT id, name FROM archived_seasons ORDER BY id DESC').all();
+    return keysToCamel(results);
+};
 
 export const archiveSeason = async (db, seasonName) => {
     // 1. Get the current leaderboard stats

@@ -41,9 +41,11 @@ async function populateGameList() {
             const loser = userMap.get(loserId);
 
             // Default user object to prevent errors if a user is not found
-            const unknownUser = { name: 'Unknown', team: 'N/A', teamColor: '#ffffff' };
+            const unknownUser = { name: 'Unknown', team: 'N/A', teamColor: '#ffffff', participating: false };
             const winnerInfo = winner || unknownUser;
             const loserInfo = loser || unknownUser;
+
+            const isFriendly = !winnerInfo.participating || !loserInfo.participating;
 
             // Format data for display
             const playedDate = new Date(game.playedAt).toLocaleDateString('en-GB', {
@@ -59,18 +61,39 @@ async function populateGameList() {
             const loserColor = getContrastingTextColor(loserInfo.teamColor);
 
             return eta.render(html`
-                <tr>
+                <tr class="{{= it.isFriendly ? 'friendly-row' : '' }}">
                     <td><div class="table-cell">{{= it.playedDate }}</div></td>
-                    <td style="background-color: {{= it.winnerInfo.teamColor }};"><div class="table-cell" style="color: {{= it.winnerColor }}">{{= it.winnerInfo.name }} ({{= it.winnerInfo.team }})</div></td>
-                    <td style="background-color: {{= it.loserInfo.teamColor }};"><div class="table-cell" style="color: {{= it.loserColor }}">{{= it.loserInfo.name }} ({{= it.loserInfo.team }})</div></td>
+                    <td style="background-color: {{= it.winnerInfo.teamColor }};">
+                        <div class="table-cell" style="color: {{= it.winnerColor }}">
+                            {{= it.winnerInfo.name }} ({{= it.winnerInfo.team }})
+                            {{ if (!it.winnerInfo.participating) { }}
+                                <span class="badge-inactive" title="Non-participating player">(NP)</span>
+                            {{ } }}
+                        </div>
+                    </td>
+                    <td style="background-color: {{= it.loserInfo.teamColor }};">
+                        <div class="table-cell" style="color: {{= it.loserColor }}">
+                            {{= it.loserInfo.name }} ({{= it.loserInfo.team }})
+                            {{ if (!it.loserInfo.participating) { }}
+                                <span class="badge-inactive" title="Non-participating player">(NP)</span>
+                            {{ } }}
+                        </div>
+                    </td>
                     <td><div class="table-cell">{{= it.fouledText }}</div></td>
                     <td><div class="table-cell">{{= it.ballsRemaining }}</div></td>
-                    <td><div class="table-cell">{{= it.rematchText }}</div></td>
+                    <td>
+                        <div class="table-cell">
+                            {{= it.rematchText }}
+                            {{ if (it.isFriendly) { }}
+                                <span class="badge-friendly" title="Friendly match (non-participating player) - does not count towards leaderboard">Friendly</span>
+                            {{ } }}
+                        </div>
+                    </td>
                     ${isAuthenticated 
                         ? html`<td><div class="table-cell"><a href="{{= it.editUrl }}">Edit</a></div></td>` 
                         : ''}
                 </tr>
-            `, { playedDate, winnerInfo, loserInfo, fouledText, rematchText, ...game, winnerColor, loserColor, editUrl });
+            `, { playedDate, winnerInfo, loserInfo, fouledText, rematchText, ...game, winnerColor, loserColor, editUrl, isFriendly });
         }).join('');
 
         // 4. Populate the table body

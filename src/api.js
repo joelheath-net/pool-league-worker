@@ -24,7 +24,8 @@ api.get('/users/:id', async (c) => {
 });
 
 api.get('/users', async (c) => {
-    const users = await db.getUsers(c.env.DB);
+    const participatingOnly = c.req.query('participating') === 'true';
+    const users = await db.getUsers(c.env.DB, { participatingOnly });
     return c.json(users);
 });
 
@@ -48,6 +49,11 @@ api.get('/archive/:seasonId', async (c) => {
     }
 
     return c.json({ seasonInfo, leaderboard });
+});
+
+api.get('/seasons', async (c) => {
+    const seasons = await db.getArchivedSeasons(c.env.DB);
+    return c.json(seasons);
 });
 
 // --- AUTHENTICATED ROUTES ---
@@ -88,8 +94,14 @@ api.post('/log-game', protectAPI, async (c) => {
     if (!validation.valid) return c.json({ message: validation.message }, 400);
     
     if (gameData.winner === gameData.loser) return c.json({ message: 'Winner and loser cannot be the same' }, 400);
-    if (!db.userExists(c.env.DB, gameData.winner)) return c.json({ message: 'Winner does not exist' }, 404);
-    if (!db.userExists(c.env.DB, gameData.loser)) return c.json({ message: 'Loser does not exist' }, 404);
+    const winnerUser = await db.getUserById(c.env.DB, gameData.winner);
+    if (!winnerUser) return c.json({ message: 'Winner does not exist' }, 404);
+    const loserUser = await db.getUserById(c.env.DB, gameData.loser);
+    if (!loserUser) return c.json({ message: 'Loser does not exist' }, 404);
+
+    if (!winnerUser.participating || !loserUser.participating) {
+        return c.json({ message: 'Both players must be active participating players to log a game' }, 400);
+    }
 
     if (typeof gameData.ballsRemaining !== 'number' || isNaN(gameData.ballsRemaining) || gameData.ballsRemaining < 0 || gameData.ballsRemaining > 8)
         return c.json({ message: 'Balls remaining must be a number between 0 and 8' }, 400);

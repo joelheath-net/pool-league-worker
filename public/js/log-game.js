@@ -6,10 +6,10 @@ async function populatePlayerDropdown() {
     const loserSelect = document.querySelector('#loser');
 
     try {
-        const response = await fetch('/api/users');
+        const response = await fetch('/api/users?participating=true');
         if (!response.ok) throw new Error('Failed to fetch user list');
-        const users = await response.json();
-
+        const allUsers = await response.json();
+        const users = allUsers.filter(user => user.participating);
 
         // Create a document fragment to build the options efficiently
         const optionsFragment = document.createDocumentFragment();
@@ -67,7 +67,8 @@ document.querySelector('#log-game-form').addEventListener('submit', async functi
 
     const response = await fetch('/api/log-game', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } });
     if (!response.ok) {
-        alert('Failed to log game. Please try again.');
+        const errorData = await response.json().catch(() => ({}));
+        alert(errorData.message || 'Failed to log game. Please try again.');
         return;
     }
     // redirect to /
