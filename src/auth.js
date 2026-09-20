@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { sign, decode } from 'hono/jwt';
-import { findOrCreateUser } from './database.js';
+import { findOrCreateUser, isEmailWhitelisted } from './database.js';
 import { performTokenRefresh } from './token-service.js';
 import { accessTokenExpiresIn, refreshTokenExpiresIn } from './token-service.js';
 
@@ -60,8 +60,9 @@ auth.get('/google/callback', async (c) => {
 
         const idTokenPayload = decode(tokens.id_token).payload;
 
-        const whitelist = c.env.EMAIL_WHITELIST || '';
-        if (whitelist && !whitelist.split(',').includes(idTokenPayload.email)) {
+        const isWhitelisted = idTokenPayload.email && await isEmailWhitelisted(c.env.DB, idTokenPayload.email);
+        if (!isWhitelisted) {
+            console.warn(`[AUTH] Login rejected: ${idTokenPayload.email} is not whitelisted`);
             return c.redirect('/');
         }
 

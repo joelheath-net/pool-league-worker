@@ -60,6 +60,12 @@ CREATE TABLE IF NOT EXISTS archived_tables (
 );
 
 
+CREATE TABLE IF NOT EXISTS whitelisted_emails (
+    email       TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
 -- CREATE TRIGGER IF NOT EXISTS prevent_game_revision_updates
 -- BEFORE UPDATE ON game_revisions
 -- BEGIN

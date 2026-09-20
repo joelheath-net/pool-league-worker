@@ -30,6 +30,21 @@ export const AdminPage = () => {
                 </div>
                 <button id="save-participation-button" class="button" style="margin-top: 10px; background-color: #28a745; color: white;">Save Participation Changes</button>
             </div>
+
+            <div class="form-group" style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 25px;">
+                <h2 style="margin-top: 0;">Email Whitelist</h2>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 12px;">
+                    Only Google accounts with email addresses in this whitelist can sign in.
+                </p>
+                <div id="whitelist-items" class="whitelist-list" style="margin-bottom: 15px;">
+                    <div style="color: #888; padding: 10px 0; text-align: center;">Loading whitelist...</div>
+                </div>
+                <form id="add-whitelist-form" style="display: flex; gap: 10px; padding: 0; box-shadow: none; max-width: none; background: transparent;">
+                    <input type="email" id="whitelist-email-input" class="input" placeholder="Enter email to whitelist..." required style="flex-grow: 1;" />
+                    <button type="submit" class="button" style="width: auto; padding: 10px 20px; white-space: nowrap; background-color: #007bff; color: white;">Add Email</button>
+                </form>
+            </div>
+
             <div class="form-group">
                 <label for="season-name">Archive Season</label>
                 <input type="text" id="season-name" class="input" placeholder="Enter season name (e.g. 2024/25)" />
@@ -44,11 +59,6 @@ export const AdminPage = () => {
                     <option value="" style="color: #757575" disabled selected>Select a player...</option>
                 </select>
                 <button id="delete-player-button" class="button" style="margin-top: 4px;">Delete Player</button>
-            </div>
-            <div class="form-group">
-                <label for="import-data-textarea">Paste Google Sheets Data</label>
-                <textarea id="import-data-textarea" class="input" rows="10" placeholder="TSV with headers: Date, Winner ID, Loser ID, Fouled on black, Balls Remaining, Rematch Round"></textarea>
-                <button id="import-games-button" class="button">Import</button>
             </div>
         </div>
     );

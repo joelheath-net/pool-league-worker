@@ -224,37 +224,27 @@ export const resetGames = async (db) => {
     return await db.prepare('DELETE FROM game_revisions').run();
 };
 
-export const importGames = async (db, gamesToProcess) => {
-    const statements = await Promise.all(gamesToProcess.map(async (game) => {
-        const latestRevision = await db.prepare(`
-            SELECT revision_id FROM game_revisions
-            WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-            ORDER BY revision_id DESC LIMIT 1`
-        ).bind(game.player1Id, game.player2Id, game.rematchId).first();
+// --- Whitelist Functions ---
 
-        const newRevisionId = latestRevision ? latestRevision.revisionId + 1 : 0;
-        
-        return db.prepare(`
-            INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-            newRevisionId,
-            game.player1Id,
-            game.player2Id,
-            game.rematchId,
-            game.winnerId,
-            game.ballsRemaining,
-            game.fouledOnBlack,
-            game.playedAt,
-            game.authorId,
-            game.authoredAt
-        );
-    }));
+export const isEmailWhitelisted = async (db, email) => {
+    if (!email) return false;
+    const row = await db.prepare('SELECT email FROM whitelisted_emails WHERE LOWER(email) = LOWER(?)').bind(email.trim()).first();
+    return !!row;
+};
 
-    if (statements.length > 0) {
-        await db.batch(statements);
-    }
-    return statements.length;
+export const getWhitelistedEmails = async (db) => {
+    const { results } = await db.prepare('SELECT email, created_at FROM whitelisted_emails ORDER BY email COLLATE NOCASE ASC').all();
+    return keysToCamel(results);
+};
+
+export const addWhitelistedEmail = async (db, email) => {
+    const cleanEmail = email.trim().toLowerCase();
+    return await db.prepare('INSERT OR IGNORE INTO whitelisted_emails (email) VALUES (?)').bind(cleanEmail).run();
+};
+
+export const removeWhitelistedEmail = async (db, email) => {
+    const cleanEmail = email.trim().toLowerCase();
+    return await db.prepare('DELETE FROM whitelisted_emails WHERE LOWER(email) = LOWER(?)').bind(cleanEmail).run();
 };
 
 

@@ -26,69 +26,44 @@ admin.post('/delete-user/:id', async (c) => {
     }
 });
 
-admin.post('/import-games', async (c) => {
-    const tsvData = await c.req.text();
-    const userPayload = await c.get('user');
-    const authorId = userPayload.sub;
+admin.get('/whitelist', async (c) => {
+    try {
+        const whitelist = await db.getWhitelistedEmails(c.env.DB);
+        return c.json(whitelist);
+    } catch (error) {
+        console.error('Error fetching whitelist:', error);
+        return c.json({ error: 'Failed to fetch whitelist' }, 500);
+    }
+});
 
-    const lines = tsvData.trim().split(/\r?\n/);
-    const header = lines.shift().split('\t').map(h => h.trim());
-    
-    const colMap = {
-        date: header.indexOf('Date'),
-        winnerId: header.indexOf('Winner ID'),
-        loserId: header.indexOf('Loser ID'),
-        fouled: header.indexOf('Fouled on black'),
-        ballsRemaining: header.indexOf('Balls Remaining'),
-        rematchRound: header.indexOf('Rematch Round')
-    };
-    
-    const gamesToProcess = [];
-
-    for (const line of lines) {
-        const values = line.split('\t').map(v => v.trim());
-
-        const winnerId = values[colMap.winnerId];
-        const loserId = values[colMap.loserId];
-        
-        if (!winnerId || !loserId) continue;
-
-        const player1Id = winnerId < loserId ? winnerId : loserId;
-        const player2Id = winnerId < loserId ? loserId : winnerId;
-
-        const rematchId = parseInt(values[colMap.rematchRound] || '1', 10) - 1;
-        const ballsRemaining = parseInt(values[colMap.ballsRemaining] || '0', 10);
-        const fouledOnBlack = (values[colMap.fouled] || 'FALSE').toUpperCase() === 'TRUE';
-        
-        let playedAt = new Date('2000-01-01').toISOString();
-        if (values[colMap.date]) {
-            // Handles 'DD/MM/YYYY' format
-            const dateParts = values[colMap.date].split(/[\s/]/); // split by space or slash
-            if (dateParts.length >= 3) {
-                 const [day, month, year] = dateParts;
-                 playedAt = new Date(`${year}-${month}-${day}`).toISOString();
-            }
+admin.post('/whitelist', async (c) => {
+    try {
+        const { email } = await c.req.json();
+        if (!email || typeof email !== 'string' || !email.includes('@')) {
+            return c.json({ error: 'Valid email address is required' }, 400);
         }
 
-        gamesToProcess.push({
-            player1Id,
-            player2Id,
-            rematchId,
-            winnerId,
-            ballsRemaining,
-            fouledOnBlack,
-            playedAt,
-            authorId,
-            authoredAt: new Date().toISOString()
-        });
-    }
-    
-    try {
-        const importedCount = await db.importGames(c.env.DB, gamesToProcess);
-        return c.json({ importedCount });
+        await db.addWhitelistedEmail(c.env.DB, email);
+        return c.json({ message: 'Email added to whitelist' }, 201);
     } catch (error) {
-        console.error('Error importing games:', error);
-        return c.json({ error: 'Failed to import games. Check data for errors or duplicates.' }, 500);
+        console.error('Error adding email to whitelist:', error);
+        return c.json({ error: 'Failed to add email to whitelist' }, 500);
+    }
+});
+
+admin.delete('/whitelist/:email', async (c) => {
+    try {
+        const rawEmail = c.req.param('email');
+        const email = decodeURIComponent(rawEmail);
+        if (!email) {
+            return c.json({ error: 'Email parameter is required' }, 400);
+        }
+
+        await db.removeWhitelistedEmail(c.env.DB, email);
+        return c.json({ message: 'Email removed from whitelist' });
+    } catch (error) {
+        console.error('Error removing email from whitelist:', error);
+        return c.json({ error: 'Failed to remove email from whitelist' }, 500);
     }
 });
 

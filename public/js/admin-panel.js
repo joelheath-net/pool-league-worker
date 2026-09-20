@@ -65,9 +65,76 @@ async function populateParticipationTable() {
     }
 }
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, match => {
+        const escapeMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+        return escapeMap[match];
+    });
+}
+
+async function populateWhitelist() {
+    const listContainer = document.querySelector('#whitelist-items');
+    if (!listContainer) return;
+
+    try {
+        const response = await fetch('/admin/whitelist');
+        if (!response.ok) throw new Error('Failed to fetch whitelist');
+        const whitelist = await response.json();
+
+        if (whitelist.length === 0) {
+            listContainer.innerHTML = '<div style="color: #888; text-align: center; padding: 10px;">No emails whitelisted yet.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = whitelist.map(item => `
+            <div class="whitelist-item">
+                <span class="whitelist-email">${escapeHtml(item.email)}</span>
+                <button type="button" class="whitelist-remove-button" data-email="${escapeHtml(item.email)}" title="Remove ${escapeHtml(item.email)}">&times;</button>
+            </div>
+        `).join('');
+
+        // Wire up remove buttons
+        listContainer.querySelectorAll('.whitelist-remove-button').forEach(button => {
+            button.addEventListener('click', async () => {
+                const email = button.dataset.email;
+                if (!confirm(`Are you sure you want to remove ${email} from the whitelist?`)) {
+                    return;
+                }
+
+                try {
+                    const deleteResponse = await fetch(`/admin/whitelist/${encodeURIComponent(email)}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!deleteResponse.ok) {
+                        const err = await deleteResponse.json().catch(() => ({}));
+                        throw new Error(err.error || 'Failed to remove email');
+                    }
+
+                    await populateWhitelist();
+                } catch (error) {
+                    console.error('Error removing email:', error);
+                    alert(`An error occurred: ${error.message}`);
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error loading whitelist:', error);
+        listContainer.innerHTML = '<div class="error" style="padding: 10px;">Error loading whitelist.</div>';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     populatePlayerDropdown();
     populateParticipationTable();
+    populateWhitelist();
     
     const resetDbButton = document.querySelector('#reset-db-button');
     if (resetDbButton) {
@@ -128,36 +195,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const importGamesButton = document.querySelector('#import-games-button');
-    if (importGamesButton) {
-        importGamesButton.addEventListener('click', async () => {
-            const tsvData = document.querySelector('#import-data-textarea').value;
-            if (!tsvData.trim()) {
-                return alert('Please paste data into the text box.');
-            }
+    const addWhitelistForm = document.querySelector('#add-whitelist-form');
+    if (addWhitelistForm) {
+        addWhitelistForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.querySelector('#whitelist-email-input');
+            const email = input.value.trim();
+            if (!email) return;
 
-            if (confirm('Are you sure you want to import these games? This will create new game revisions.')) {
-                try {
-                    const response = await fetch('/admin/import-games', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'text/plain',
-                        },
-                        body: tsvData,
-                    });
-                    
-                    const result = await response.json();
+            try {
+                const response = await fetch('/admin/whitelist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
 
-                    if (!response.ok) {
-                        throw new Error(result.error || 'Failed to import games.');
-                    }
-
-                    alert(`Successfully imported ${result.importedCount} games.`);
-                    document.querySelector('#import-data-textarea').value = ''; // Clear the text area
-                } catch (error) {
-                    console.error('Error importing games:', error);
-                    alert(`An error occurred while importing games: ${error.message}`);
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to add email');
                 }
+
+                input.value = '';
+                await populateWhitelist();
+            } catch (error) {
+                console.error('Error adding email:', error);
+                alert(`An error occurred: ${error.message}`);
             }
         });
     }
