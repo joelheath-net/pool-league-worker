@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS archived_seasons (
 CREATE TABLE IF NOT EXISTS archived_tables (
     season_id        INTEGER  NOT NULL,
     player_id        TEXT     NOT NULL,
+    name             TEXT     NOT NULL,
+    team             TEXT     NOT NULL,
+    team_color       TEXT     NOT NULL,
 
     points           INTEGER  NOT NULL,
     wins             INTEGER  NOT NULL,
@@ -52,7 +55,6 @@ CREATE TABLE IF NOT EXISTS archived_tables (
 
     PRIMARY KEY (season_id, player_id),
 
-    FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (season_id) REFERENCES archived_seasons(id) ON DELETE CASCADE
 );
 

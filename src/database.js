@@ -241,16 +241,15 @@ export const getArchivedLeaderboard = async (db, seasonId) => {
     const { results } = await db.prepare(`
         SELECT
             a.player_id,
-            u.name,
-            u.team,
-            u.team_color,
+            a.name,
+            a.team,
+            a.team_color,
             a.wins,
             a.losses,
             a.balls_remaining,
             a.fouls_on_black,
             a.points
         FROM archived_tables a
-        JOIN users u ON a.player_id = u.id
         WHERE a.season_id = ?`
     ).bind(seasonId).all();
     return keysToCamel(results);
@@ -267,10 +266,38 @@ export const archiveSeason = async (db, seasonName) => {
         throw new Error("Cannot archive an empty season.");
     }
 
-    // 2. Process stats to calculate points
+    const playerIds = leaderboardStats.map(({ playerId }) => playerId);
+    const usersById = new Map();
+
+    if (playerIds.length > 0) {
+        const placeholders = playerIds.map(() => '?').join(', ');
+        const { results } = await db.prepare(`
+            SELECT id, name, team, team_color
+            FROM users
+            WHERE id IN (${placeholders})`
+        ).bind(...playerIds).all();
+
+        for (const user of keysToCamel(results)) {
+            usersById.set(user.id, user);
+        }
+    }
+
+    // 2. Process stats to calculate points and freeze the player identity snapshot
     const processedStats = leaderboardStats.map(playerStats => {
         const points = playerStats.wins * 3 + playerStats.losses - playerStats.foulsOnBlack;
-        return { ...playerStats, points };
+        const user = usersById.get(playerStats.playerId) || {
+            name: 'Unknown Player',
+            team: 'My Team',
+            teamColor: '#ffffff'
+        };
+
+        return {
+            ...playerStats,
+            name: user.name,
+            team: user.team,
+            teamColor: user.teamColor,
+            points
+        };
     });
 
     // 3. Create a new season entry and get its ID
@@ -279,18 +306,17 @@ export const archiveSeason = async (db, seasonName) => {
         ).bind(seasonName).run())
         .meta.last_row_id;
 
-    console.log(seasonId);
-
-    console.log(processedStats);
-
     // 4. Prepare statements to insert leaderboard data
     const insertStatements = processedStats.map(stats => {
         return db.prepare(`
-            INSERT INTO archived_tables (season_id, player_id, points, wins, losses, fouls_on_black, balls_remaining)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`
+            INSERT INTO archived_tables (season_id, player_id, name, team, team_color, points, wins, losses, fouls_on_black, balls_remaining)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             seasonId,
             stats.playerId,
+            stats.name,
+            stats.team,
+            stats.teamColor,
             stats.points,
             stats.wins,
             stats.losses,
