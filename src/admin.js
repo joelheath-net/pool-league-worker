@@ -81,6 +81,33 @@ admin.post('/archive-season', async (c) => {
     }
 });
 
+admin.post('/update-players', async (c) => {
+    try {
+        const { players } = await c.req.json();
+        if (!Array.isArray(players)) {
+            return c.json({ error: 'Invalid players data format. Expected an array of players' }, 400);
+        }
+
+        for (const p of players) {
+            if (!p.id || typeof p.name !== 'string' || !p.name.trim()) {
+                return c.json({ error: 'Each player must have an ID and a non-empty name' }, 400);
+            }
+            if (typeof p.team !== 'string' || !p.team.trim()) {
+                return c.json({ error: `Player "${p.name}" must have a non-empty team name` }, 400);
+            }
+            if (!p.teamColor || !/^#[0-9a-fA-F]{6}$/.test(p.teamColor)) {
+                return c.json({ error: `Invalid team colour for "${p.name}". Must be in format #RRGGBB` }, 400);
+            }
+        }
+
+        const updatedCount = await db.updatePlayers(c.env.DB, players);
+        return c.json({ message: 'Players updated successfully', updatedCount });
+    } catch (error) {
+        console.error('Error updating players:', error);
+        return c.json({ error: error.message || 'Failed to update players' }, 500);
+    }
+});
+
 admin.post('/update-participation', async (c) => {
     try {
         const { participations } = await c.req.json();

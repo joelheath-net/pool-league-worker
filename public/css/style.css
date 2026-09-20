@@ -413,3 +413,29 @@ header nav a:hover, header nav a.active {
     background-color: #dc3545;
     color: #fff;
 }
+
+/* Admin Players Table Inputs */
+.player-text-input {
+    min-width: 140px;
+    padding: 7px 10px;
+    font-size: 0.95em;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+.player-text-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.player-color-input {
+    width: 48px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+    vertical-align: middle;
+}

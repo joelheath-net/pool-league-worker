@@ -28,8 +28,8 @@ async function populatePlayerDropdown() {
     }
 }
 
-async function populateParticipationTable() {
-    const tableBody = document.querySelector('#participation-body');
+async function populatePlayersTable() {
+    const tableBody = document.querySelector('#players-body');
     if (!tableBody) return;
 
     try {
@@ -38,30 +38,40 @@ async function populateParticipationTable() {
         const users = await response.json();
 
         if (users.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><div class="table-cell">No users registered yet.</div></td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><div class="table-cell">No users registered yet.</div></td></tr>';
             return;
         }
 
-        const rowsHtml = users.map(user => {
+        tableBody.innerHTML = users.map(user => {
             const color = user.teamColor || '#ffffff';
-            const textColor = getContrastingTextColor(color);
-            return eta.render(html`
-                <tr>
-                    <td style="background-color: {{= it.color }};"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.name }}</div></td>
-                    <td style="background-color: {{= it.color }};"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.team }}</div></td>
+            return `
+                <tr data-user-id="${escapeHtml(user.id)}">
+                    <td>
+                        <div class="table-cell">
+                            <input type="text" class="player-name-input player-text-input" value="${escapeHtml(user.name)}" required placeholder="Player name" />
+                        </div>
+                    </td>
+                    <td>
+                        <div class="table-cell">
+                            <input type="text" class="player-team-input player-text-input" value="${escapeHtml(user.team)}" required placeholder="Team name" />
+                        </div>
+                    </td>
                     <td style="text-align: center;">
                         <div class="table-cell">
-                            <input type="checkbox" class="user-participating-checkbox" data-user-id="{{= it.id }}" {{= it.participating ? 'checked' : '' }} />
+                            <input type="color" class="player-color-input" value="${escapeHtml(color)}" title="Team colour" />
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <div class="table-cell">
+                            <input type="checkbox" class="player-participating-checkbox" ${user.participating ? 'checked' : ''} />
                         </div>
                     </td>
                 </tr>
-            `, { ...user, color, textColor });
+            `;
         }).join('');
-
-        tableBody.innerHTML = rowsHtml;
     } catch (error) {
-        console.error('Error populating participation table:', error);
-        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><div class="table-cell">Error loading players.</div></td></tr>';
+        console.error('Error populating players table:', error);
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><div class="table-cell">Error loading players.</div></td></tr>';
     }
 }
 
@@ -133,7 +143,7 @@ async function populateWhitelist() {
 
 document.addEventListener('DOMContentLoaded', () => {
     populatePlayerDropdown();
-    populateParticipationTable();
+    populatePlayersTable();
     populateWhitelist();
     
     const resetDbButton = document.querySelector('#reset-db-button');
@@ -258,48 +268,79 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectAllBtn = document.querySelector('#select-all-participation');
     if (selectAllBtn) {
         selectAllBtn.addEventListener('click', () => {
-            document.querySelectorAll('.user-participating-checkbox').forEach(cb => cb.checked = true);
+            document.querySelectorAll('.player-participating-checkbox').forEach(cb => cb.checked = true);
         });
     }
 
     const deselectAllBtn = document.querySelector('#deselect-all-participation');
     if (deselectAllBtn) {
         deselectAllBtn.addEventListener('click', () => {
-            document.querySelectorAll('.user-participating-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.player-participating-checkbox').forEach(cb => cb.checked = false);
         });
     }
 
-    const saveParticipationBtn = document.querySelector('#save-participation-button');
-    if (saveParticipationBtn) {
-        saveParticipationBtn.addEventListener('click', async () => {
-            const checkboxes = document.querySelectorAll('.user-participating-checkbox');
-            const participations = Array.from(checkboxes).map(cb => ({
-                id: cb.dataset.userId,
-                participating: cb.checked
-            }));
+    const savePlayersBtn = document.querySelector('#save-players-button') || document.querySelector('#save-participation-button');
+    if (savePlayersBtn) {
+        savePlayersBtn.addEventListener('click', async () => {
+            const rows = document.querySelectorAll('#players-body tr[data-user-id]');
+            const players = [];
 
-            saveParticipationBtn.disabled = true;
-            saveParticipationBtn.textContent = 'Saving...';
+            for (const row of rows) {
+                const id = row.dataset.userId;
+                const nameInput = row.querySelector('.player-name-input');
+                const teamInput = row.querySelector('.player-team-input');
+                const colorInput = row.querySelector('.player-color-input');
+                const checkbox = row.querySelector('.player-participating-checkbox');
+
+                const name = nameInput ? nameInput.value.trim() : '';
+                const team = teamInput ? teamInput.value.trim() : '';
+                const teamColor = colorInput ? colorInput.value : '#ffffff';
+                const participating = checkbox ? checkbox.checked : true;
+
+                if (!name) {
+                    alert('All players must have a name.');
+                    if (nameInput) nameInput.focus();
+                    return;
+                }
+
+                if (!team) {
+                    alert(`Please enter a team name for "${name}".`);
+                    if (teamInput) teamInput.focus();
+                    return;
+                }
+
+                players.push({ id, name, team, teamColor, participating });
+            }
+
+            savePlayersBtn.disabled = true;
+            savePlayersBtn.textContent = 'Saving...';
 
             try {
-                const response = await fetch('/admin/update-participation', {
+                const response = await fetch('/admin/update-players', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ participations })
+                    body: JSON.stringify({ players })
                 });
 
                 const result = await response.json();
                 if (!response.ok) {
-                    throw new Error(result.error || 'Failed to save participation changes');
+                    throw new Error(result.error || 'Failed to save player changes');
                 }
 
-                alert('Player participation updated successfully.');
+                alert('Player changes saved successfully.');
+
+                // Refresh the "Delete player" dropdown so names/teams match
+                const playerSelect = document.querySelector('#player');
+                if (playerSelect) {
+                    playerSelect.innerHTML = '<option value="" style="color: #757575" disabled selected>Select a player...</option>';
+                    populatePlayerDropdown();
+                }
             } catch (error) {
-                console.error('Error saving participation changes:', error);
+                console.error('Error saving player changes:', error);
                 alert(`An error occurred while saving: ${error.message}`);
             } finally {
-                saveParticipationBtn.disabled = false;
-                saveParticipationBtn.textContent = 'Save Participation Changes';
+                savePlayersBtn.disabled = false;
+                savePlayersBtn.textContent = 'Save Changes';
             }
         });
     }

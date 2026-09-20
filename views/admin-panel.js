@@ -4,31 +4,32 @@ export const AdminPage = () => {
             <h1 class="centre-title">Admin Panel</h1>
 
             <div class="form-group" style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 25px;">
-                <h2 style="margin-top: 0;">Player Participation</h2>
+                <h2 style="margin-top: 0;">Players</h2>
                 <p style="color: #666; font-size: 0.9em; margin-bottom: 12px;">
-                    Select which players are participating in the current season. Non-participating players will not appear on the leaderboard or in game logging dropdowns, and any games they play will be treated as friendlies.
+                    Edit player display names, team names, team colours, and season participation. Click Save Changes at the bottom to apply edits.
                 </p>
                 <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                    <button type="button" id="select-all-participation" class="button" style="width: auto; padding: 6px 12px; font-size: 0.85em; background-color: #6c757d; color: white;">Select All</button>
-                    <button type="button" id="deselect-all-participation" class="button" style="width: auto; padding: 6px 12px; font-size: 0.85em; background-color: #6c757d; color: white;">Deselect All</button>
+                    <button type="button" id="select-all-participation" class="button" style="width: auto; padding: 6px 12px; font-size: 0.85em; background-color: #6c757d; color: white;">Select All Participating</button>
+                    <button type="button" id="deselect-all-participation" class="button" style="width: auto; padding: 6px 12px; font-size: 0.85em; background-color: #6c757d; color: white;">Deselect All Participating</button>
                 </div>
-                <div class="table-container" style="max-height: 400px; overflow-y: auto; margin: 10px 0;">
+                <div class="table-container" style="max-height: 480px; overflow-y: auto; margin: 10px 0;">
                     <table style="width: 100%;">
                         <thead>
                             <tr>
-                                <th><div class="table-cell">Player</div></th>
-                                <th><div class="table-cell">Team</div></th>
+                                <th><div class="table-cell">Player Name</div></th>
+                                <th><div class="table-cell">Team Name</div></th>
+                                <th style="text-align: center;"><div class="table-cell">Colour</div></th>
                                 <th style="text-align: center;"><div class="table-cell">Participating</div></th>
                             </tr>
                         </thead>
-                        <tbody id="participation-body">
+                        <tbody id="players-body">
                             <tr>
-                                <td colspan="3" style="text-align: center;"><div class="table-cell">Loading players...</div></td>
+                                <td colspan="4" style="text-align: center;"><div class="table-cell">Loading players...</div></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <button id="save-participation-button" class="button" style="margin-top: 10px; background-color: #28a745; color: white;">Save Participation Changes</button>
+                <button id="save-players-button" class="button" style="margin-top: 10px; background-color: #28a745; color: white;">Save Changes</button>
             </div>
 
             <div class="form-group" style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 25px;">

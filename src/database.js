@@ -220,6 +220,18 @@ export const updateUsersParticipation = async (db, participations) => {
     return statements.length;
 };
 
+export const updatePlayers = async (db, players) => {
+    const statements = players.map(p =>
+        db.prepare(
+            'UPDATE users SET name = ?, team = ?, team_color = ?, participating = ? WHERE id = ?'
+        ).bind(p.name, p.team, p.teamColor, p.participating ? 1 : 0, p.id)
+    );
+    if (statements.length > 0) {
+        await db.batch(statements);
+    }
+    return statements.length;
+};
+
 export const resetGames = async (db) => {
     return await db.prepare('DELETE FROM game_revisions').run();
 };
