@@ -75,18 +75,20 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
             id: googleUser.sub,
             name: googleUser.name,
             email: googleUser.email,
+            role: 'user',
         };
         await db.prepare(`
-            INSERT INTO users (id, name, email, google_access_token, google_access_token_expires_at, google_refresh_token, participating)
-            VALUES (?, ?, ?, ?, ?, ?, 1)`
+            INSERT INTO users (id, name, email, role, google_access_token, google_access_token_expires_at, google_refresh_token, participating)
+            VALUES (?, ?, ?, 'user', ?, ?, ?, 1)`
         ).bind(
             user.id,
             user.name,
             user.email,
             tokens.access_token,
             expiresAt,
-            tokens.refresh_token // This will be stored only on the first login
+            tokens.refresh_token || null
         ).run();
+        user.hasRefreshToken = Boolean(tokens.refresh_token);
     } else {
         // User exists, update tokens. Refresh token is only sent on first approval, so only update it if we get a new one.
         const updateFields = ['google_access_token = ?', 'google_access_token_expires_at = ?'];
@@ -100,6 +102,9 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
         params.push(user.id);
 
         await db.prepare(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`).bind(...params).run();
+
+        const tokenRecord = await getUserForRefresh(db, user.id);
+        user.hasRefreshToken = Boolean(tokens.refresh_token || tokenRecord?.googleRefreshToken);
     }
 
     return user;
@@ -109,6 +114,10 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
 export const getUserForRefresh = async (db, userId) => {
     const user = await db.prepare('SELECT id, email, role, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
     return keysToCamel(user);
+};
+
+export const clearUserRefreshToken = async (db, userId) => {
+    return await db.prepare('UPDATE users SET google_refresh_token = NULL WHERE id = ?').bind(userId).run();
 };
 
 export const updateUserTokens = async (db, userId, accessToken, expiresIn) => {

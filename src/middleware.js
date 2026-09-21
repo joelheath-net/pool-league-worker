@@ -1,6 +1,7 @@
-import { getCookie, setCookie } from 'hono/cookie';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { verify, decode } from 'hono/jwt';
 import { performTokenRefresh } from './token-service.js';
+import { clearUserRefreshToken } from './database.js';
 
 /**
  * THIS IS THE NEW CENTRAL MIDDLEWARE.
@@ -39,12 +40,23 @@ export const authContextMiddleware = async (c, next) => {
                     c.set('isAuthenticated', true);
                     c.set('isAdmin', newPayload.role === 'admin');
                     console.log('[MIDDLEWARE] Token refreshed successfully.');
-                } else if (refreshStatus === 'NO_REFRESH_TOKEN') {
-                    setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 5 }); // Expires in 5 minutes
+                } else {
+                    deleteCookie(c, 'auth_token', { path: '/' });
+
+                    if (refreshStatus === 'INVALID_GRANT') {
+                        console.warn(`[MIDDLEWARE] Google refresh token invalid for user ${userId}. Clearing from DB.`);
+                        await clearUserRefreshToken(c.env.DB, userId);
+                        setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 60 * 24 * 7 }); // 7 days
+                    } else if (refreshStatus === 'NO_REFRESH_TOKEN') {
+                        setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 60 * 24 * 7 }); // 7 days
+                    }
                 }
+            } else {
+                deleteCookie(c, 'auth_token', { path: '/' });
             }
+        } else {
+            deleteCookie(c, 'auth_token', { path: '/' });
         }
-        // For any other error, we just leave the user as unauthenticated.
     }
     
     await next();

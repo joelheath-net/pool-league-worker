@@ -20,7 +20,7 @@ auth.get('/google/login', (c) => {
     googleAuthUrl.searchParams.set('scope', 'openid profile email');
     googleAuthUrl.searchParams.set('access_type', 'offline');
 
-    const reconsentNeeded = getCookie(c, 'reconsent_needed');
+    const reconsentNeeded = getCookie(c, 'reconsent_needed') || c.req.query('prompt') === 'consent';
     if (reconsentNeeded) {
         googleAuthUrl.searchParams.set('prompt', 'consent');
         deleteCookie(c, 'reconsent_needed', { path: '/' });
@@ -68,6 +68,13 @@ auth.get('/google/callback', async (c) => {
 
         const user = await findOrCreateUser(c.env.DB, idTokenPayload, tokens);
 
+        // Self-healing check: if Google did not issue a refresh token and user does not have one in DB,
+        // re-route through consent prompt to obtain and store a healthy refresh token.
+        if (!user.hasRefreshToken) {
+            console.warn(`[AUTH] User ${user.id} has no refresh token. Prompting for consent.`);
+            return c.redirect('/auth/google/login?prompt=consent');
+        }
+
         const payload = {
             sub: user.id,
             email: user.email,
@@ -107,7 +114,7 @@ auth.post('/refresh', async (c) => {
     const userId = payload?.sub;
     const refreshed = await performTokenRefresh(c, userId);
 
-    if (refreshed) {
+    if (refreshed?.jwt) {
         return c.json({ message: 'Token refreshed' });
     } else {
         deleteCookie(c, 'auth_token', { path: '/' });

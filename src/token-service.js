@@ -19,21 +19,26 @@ export const performTokenRefresh = async (c, userId) => {
     }
 
     try {
+        const bodyParams = new URLSearchParams({
+            client_id: c.env.GOOGLE_CLIENT_ID,
+            client_secret: c.env.GOOGLE_CLIENT_SECRET,
+            refresh_token: user.googleRefreshToken,
+            grant_type: 'refresh_token',
+        });
+
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                client_id: c.env.GOOGLE_CLIENT_ID,
-                client_secret: c.env.GOOGLE_CLIENT_SECRET,
-                refresh_token: user.googleRefreshToken,
-                grant_type: 'refresh_token',
-            }),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: bodyParams.toString(),
         });
 
         const tokenData = await tokenResponse.json();
 
         if (!tokenResponse.ok) {
             console.error(`[TOKEN-SERVICE] Refresh failed: Google API returned an error for user ${userId}.`, tokenData);
+            if (tokenData?.error === 'invalid_grant') {
+                return { message: 'INVALID_GRANT', jwt: null };
+            }
             return { message: 'GOOGLE_API_ERROR', jwt: null };
         }
 
