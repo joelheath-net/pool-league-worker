@@ -6,7 +6,7 @@ async function populateGameList() {
     const container = document.querySelector('.container');
     const isAuthenticated = container && container.dataset.isAuthenticated === 'true';
 
-    //tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Loading game history...</td></tr>';
+    //tableBody.innerHTML = html`<tr><td colspan="7" style="text-align: center;">Loading game history...</td></tr>`;
 
     try {
         // 1. Fetch users and games in parallel for efficiency

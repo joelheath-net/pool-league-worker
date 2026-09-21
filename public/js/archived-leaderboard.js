@@ -11,8 +11,16 @@ async function populateArchive() {
 
         seasonNameEl.textContent = seasonInfo.name;
 
-        // Sort data by points
-        leaderboard.sort((a, b) => b.points - a.points);
+        // Sort data: points descending, ballsRemaining ascending, foulsOnBlack ascending
+        leaderboard.sort((a, b) => {
+            if (b.points !== a.points) {
+                return b.points - a.points;
+            }
+            if (a.ballsRemaining !== b.ballsRemaining) {
+                return a.ballsRemaining - b.ballsRemaining;
+            }
+            return a.foulsOnBlack - b.foulsOnBlack;
+        });
 
         const rowsHtml = leaderboard.map(playerStats => {
             const color = playerStats.teamColor || '#ffffff';

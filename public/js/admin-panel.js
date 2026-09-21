@@ -38,13 +38,13 @@ async function populatePlayersTable() {
         const users = await response.json();
 
         if (users.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><div class="table-cell">No users registered yet.</div></td></tr>';
+            tableBody.innerHTML = html`<tr><td colspan="4" style="text-align: center;"><div class="table-cell">No users registered yet.</div></td></tr>`;
             return;
         }
 
         tableBody.innerHTML = users.map(user => {
             const color = user.teamColor || '#ffffff';
-            return `
+            return html`
                 <tr data-user-id="${escapeHtml(user.id)}">
                     <td>
                         <div class="table-cell">
@@ -71,7 +71,7 @@ async function populatePlayersTable() {
         }).join('');
     } catch (error) {
         console.error('Error populating players table:', error);
-        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><div class="table-cell">Error loading players.</div></td></tr>';
+        tableBody.innerHTML = html`<tr><td colspan="4" style="text-align: center;"><div class="table-cell">Error loading players.</div></td></tr>`;
     }
 }
 
@@ -99,11 +99,11 @@ async function populateWhitelist() {
         const whitelist = await response.json();
 
         if (whitelist.length === 0) {
-            listContainer.innerHTML = '<div style="color: #888; text-align: center; padding: 10px;">No emails whitelisted yet.</div>';
+            listContainer.innerHTML = html`<div style="color: #888; text-align: center; padding: 10px;">No emails whitelisted yet.</div>`;
             return;
         }
 
-        listContainer.innerHTML = whitelist.map(item => `
+        listContainer.innerHTML = whitelist.map(item => html`
             <div class="whitelist-item">
                 <span class="whitelist-email">${escapeHtml(item.email)}</span>
                 <button type="button" class="whitelist-remove-button" data-email="${escapeHtml(item.email)}" title="Remove ${escapeHtml(item.email)}">&times;</button>
@@ -137,7 +137,7 @@ async function populateWhitelist() {
         });
     } catch (error) {
         console.error('Error loading whitelist:', error);
-        listContainer.innerHTML = '<div class="error" style="padding: 10px;">Error loading whitelist.</div>';
+        listContainer.innerHTML = html`<div class="error" style="padding: 10px;">Error loading whitelist.</div>`;
     }
 }
 
@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Refresh the "Delete player" dropdown so names/teams match
                 const playerSelect = document.querySelector('#player');
                 if (playerSelect) {
-                    playerSelect.innerHTML = '<option value="" style="color: #757575" disabled selected>Select a player...</option>';
+                    playerSelect.innerHTML = html`<option value="" style="color: #757575" disabled selected>Select a player...</option>`;
                     populatePlayerDropdown();
                 }
             } catch (error) {

@@ -7,7 +7,7 @@ async function populateSeasons() {
         if (!response.ok) throw new Error('Failed to fetch seasons');
         const seasons = await response.json();
 
-        let html = `
+        let seasonMarkup = html`
             <a href="/" class="season-card current-season">
                 <div class="season-card-info">
                     <span class="season-card-title">Current Season</span>
@@ -18,7 +18,7 @@ async function populateSeasons() {
         `;
 
         if (seasons.length > 0) {
-            html += seasons.map(season => `
+            seasonMarkup += seasons.map(season => html`
                 <a href="/archive/${season.id}" class="season-card">
                     <div class="season-card-info">
                         <span class="season-card-title">${escapeHtml(season.name)}</span>
@@ -28,17 +28,17 @@ async function populateSeasons() {
                 </a>
             `).join('');
         } else {
-            html += `
+            seasonMarkup += html`
                 <div style="text-align: center; color: #888; padding: 20px 0; font-size: 0.95em;">
                     No previous seasons have been archived yet.
                 </div>
             `;
         }
 
-        container.innerHTML = html;
+        container.innerHTML = seasonMarkup;
     } catch (error) {
         console.error('Error loading seasons:', error);
-        container.innerHTML = `
+        container.innerHTML = html`
             <a href="/" class="season-card current-season">
                 <div class="season-card-info">
                     <span class="season-card-title">Current Season</span>
