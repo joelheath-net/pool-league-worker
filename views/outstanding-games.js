@@ -6,7 +6,7 @@ export const OutstandingGamesPage = ({ rounds = 2, isAuthenticated = false }) =>
                 <div class="fixtures-controls-card">
                     <form action="/outstanding-games" method="GET" class="fixtures-controls-form">
                         <label for="rematch-rounds-input" class="fixtures-controls-label">
-                            Rematch Rounds (times players play each other):
+                            Rematch Rounds:
                         </label>
                         <div class="fixtures-controls-inline">
                             <input
@@ -49,7 +49,7 @@ export const OutstandingGamesPage = ({ rounds = 2, isAuthenticated = false }) =>
             </div>
 
             <div style="text-align: center; margin-top: 24px; margin-bottom: 24px;">
-                <a href="/game-list" class="secondary-link">&larr; Back to Game History</a>
+                <a href="/game-list" class="secondary-link">Back to Game History</a>
             </div>
         </div>
     );

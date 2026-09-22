@@ -153,10 +153,13 @@ footer {
     bottom: 0;
     width: 100%;
 
-
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     align-items: center;
-    justify-content: space-around;
+}
+
+footer p {
+    text-align: center;
 }
 
 
@@ -245,6 +248,7 @@ header nav a:hover, header nav a.active {
 /* media max-width 650pz and portrait: */
 @media (max-width: 850px) {
     footer {
+        display: flex;
         flex-direction: column;
         align-items: center;
     }
@@ -560,5 +564,116 @@ header nav a:hover, header nav a.active {
     }
     .fixtures-rounds-input {
         width: 100% !important;
+    }
+}
+
+/* Log Game Redesign */
+.match-players-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.player-select-col {
+    flex: 1;
+    margin-bottom: 0 !important;
+}
+
+.match-vs-badge {
+    font-weight: 800;
+    color: #6c757d;
+    font-size: 0.85rem;
+    background-color: #e9ecef;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 24px;
+    flex-shrink: 0;
+}
+
+.winner-selection-section {
+    margin-bottom: 20px;
+}
+
+.winner-toggle-container {
+    display: flex;
+    gap: 10px;
+}
+
+.winner-toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 2px solid #dee2e6;
+    background-color: #f8f9fa;
+    color: #495057;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+.winner-toggle-btn:hover {
+    border-color: #adb5bd;
+    background-color: #f1f3f5;
+}
+
+.winner-toggle-btn.active {
+    border-color: #28a745;
+    background-color: #e8f5e9;
+    color: #1b5e20;
+    box-shadow: 0 0 0 1px #28a745;
+}
+
+.winner-toggle-btn .winner-status-icon {
+    font-size: 1.1rem;
+    opacity: 0.3;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.winner-toggle-btn.active .winner-status-icon {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.loser-details-card {
+    background-color: #fcfcfd;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #ffc107;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 15px;
+}
+
+.loser-details-title {
+    font-weight: 500;
+    color: #6c757d;
+    margin-bottom: 14px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 540px) {
+    .match-players-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .match-vs-badge {
+        align-self: center;
+        margin-top: 0;
+        margin-bottom: 4px;
+    }
+    .winner-toggle-container {
+        flex-direction: column;
     }
 }

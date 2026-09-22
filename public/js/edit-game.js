@@ -38,19 +38,32 @@ async function initializeEditPage() {
         const rematchText = game.rematchId === 0 ? 'First Match' : `Rematch ${game.rematchId}`;
         matchupTitle.textContent = `${player1.name} vs. ${player2.name} (${rematchText})`;
 
-        const winnerSelect = document.querySelector('#winner');
-        // Populate winner dropdown with only the two players in this match
-        [player1, player2].forEach(p => {
-            const option = document.createElement('option');
-            option.value = p.id;
-            option.textContent = `${p.name} (${p.team})`;
-            option.style.backgroundColor = p.teamColor;
-            option.style.color = getContrastingTextColor(p.teamColor);
-            winnerSelect.appendChild(option);
-        });
+        let currentWinnerId = game.winnerId;
+        const winnerP1Btn = document.querySelector('#winner-p1-btn');
+        const winnerP2Btn = document.querySelector('#winner-p2-btn');
+        const winnerP1Name = document.querySelector('#winner-p1-name');
+        const winnerP2Name = document.querySelector('#winner-p2-name');
+
+        if (winnerP1Name) winnerP1Name.textContent = player1.name;
+        if (winnerP2Name) winnerP2Name.textContent = player2.name;
+
+        const updateWinnerToggle = (selectedId) => {
+            currentWinnerId = selectedId;
+            if (selectedId === player1.id) {
+                winnerP1Btn.classList.add('active');
+                winnerP2Btn.classList.remove('active');
+            } else {
+                winnerP2Btn.classList.add('active');
+                winnerP1Btn.classList.remove('active');
+            }
+        };
+
+        updateWinnerToggle(game.winnerId);
+
+        winnerP1Btn.addEventListener('click', () => updateWinnerToggle(player1.id));
+        winnerP2Btn.addEventListener('click', () => updateWinnerToggle(player2.id));
         
         // Set the pre-filled values
-        winnerSelect.value = game.winnerId;
         document.querySelector('#balls-remaining').value = game.ballsRemaining;
         document.querySelector('#fouled-on-black').checked = game.fouledOnBlack;
         // Format the date to YYYY-MM-DD for the input field
@@ -72,8 +85,9 @@ async function initializeEditPage() {
     const formData = new FormData(event.target);
     // Convert form data to a plain object
     const updates = Object.fromEntries(formData.entries());
+    updates.winnerId = currentWinnerId;
     // Convert checkbox value from "on" to a boolean
-    updates.fouledOnBlack = updates.fouledOnBlack === 'on';
+    updates.fouledOnBlack = document.querySelector('#fouled-on-black').checked;
     updates.ballsRemaining = parseInt(updates.ballsRemaining, 10);
 
     const params = new URLSearchParams(window.location.search);

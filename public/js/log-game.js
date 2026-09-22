@@ -1,9 +1,12 @@
+let userMap = new Map();
+let currentWinnerPlayer = 1;
+
 /**
- * Fetches the list of all users and populates the dropdown selectors.
+ * Fetches the list of all participating users and populates player1 and player2 dropdowns.
  */
 async function populatePlayerDropdown() {
-    const winnerSelect = document.querySelector('#winner');
-    const loserSelect = document.querySelector('#loser');
+    const player1Select = document.querySelector('#player1');
+    const player2Select = document.querySelector('#player2');
 
     try {
         const response = await fetch('/api/users?participating=true');
@@ -11,77 +14,158 @@ async function populatePlayerDropdown() {
         const allUsers = await response.json();
         const users = allUsers.filter(user => user.participating);
 
-        // Create a document fragment to build the options efficiently
-        const optionsFragment = document.createDocumentFragment();
+        userMap = new Map(users.map(user => [user.id, user]));
 
-        users.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
-            option.textContent = `${user.name} (${user.team})`;
-            option.style.backgroundColor = user.teamColor;
-            option.style.color = getContrastingTextColor(user.teamColor);
-            optionsFragment.appendChild(option);
-        });
+        // Create options for dropdowns
+        const createOptionsFragment = () => {
+            const fragment = document.createDocumentFragment();
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.name} (${user.team})`;
+                option.style.backgroundColor = user.teamColor;
+                option.style.color = getContrastingTextColor(user.teamColor);
+                fragment.appendChild(option);
+            });
+            return fragment;
+        };
 
-        // Append the options to both select elements by cloning the fragment
-        winnerSelect.appendChild(optionsFragment.cloneNode(true));
-        loserSelect.appendChild(optionsFragment.cloneNode(true));
+        player1Select.appendChild(createOptionsFragment());
+        player2Select.appendChild(createOptionsFragment());
 
+        // Check for URL query params: ?player1=...&player2=...
         const urlParams = new URLSearchParams(window.location.search);
         const player1Param = urlParams.get('player1');
         const player2Param = urlParams.get('player2');
-        if (player1Param && users.some(u => u.id === player1Param)) {
-            winnerSelect.value = player1Param;
+
+        if (player1Param && userMap.has(player1Param)) {
+            player1Select.value = player1Param;
         }
-        if (player2Param && users.some(u => u.id === player2Param)) {
-            loserSelect.value = player2Param;
+        if (player2Param && userMap.has(player2Param)) {
+            player2Select.value = player2Param;
         }
+
+        updateUI();
 
     } catch (error) {
         console.error("Error populating player dropdowns:", error);
-        winnerSelect.innerHTML = html`<option value="">Error loading players</option>`;
-        loserSelect.innerHTML = html`<option value="">Error loading players</option>`;
+        player1Select.innerHTML = html`<option value="">Error loading players</option>`;
+        player2Select.innerHTML = html`<option value="">Error loading players</option>`;
+    }
+}
+
+/**
+ * Updates winner button labels and loser name display based on currently selected players and winner.
+ */
+function updateUI() {
+    const player1Select = document.querySelector('#player1');
+    const player2Select = document.querySelector('#player2');
+    const winnerBtn1 = document.querySelector('#winner-p1-btn');
+    const winnerBtn2 = document.querySelector('#winner-p2-btn');
+    const winnerP1Name = document.querySelector('#winner-p1-name');
+    const winnerP2Name = document.querySelector('#winner-p2-name');
+    const loserNameText = document.querySelector('#loser-name-text');
+
+    const u1 = userMap.get(player1Select.value);
+    const u2 = userMap.get(player2Select.value);
+
+    const p1DisplayName = u1 ? u1.name : 'Player 1';
+    const p2DisplayName = u2 ? u2.name : 'Player 2';
+
+    if (winnerP1Name) winnerP1Name.textContent = p1DisplayName;
+    if (winnerP2Name) winnerP2Name.textContent = p2DisplayName;
+
+    if (currentWinnerPlayer === 1) {
+        winnerBtn1.classList.add('active');
+        winnerBtn2.classList.remove('active');
+    } else {
+        winnerBtn2.classList.add('active');
+        winnerBtn1.classList.remove('active');
     }
 }
 
 // Set the date input to today by default
 function setDefaultDate() {
     const dateInput = document.querySelector('#game-date');
-    // Format to YYYY-MM-DD for the date input value
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
 }
 
-// Add a submit handler to the form
-document.querySelector('#log-game-form').addEventListener('submit', async function(event) {
-    // Prevent the form from actually submitting to a server
-    event.preventDefault(); 
+// Setup winner toggle button listeners
+function setupToggleButtons() {
+    const winnerBtn1 = document.querySelector('#winner-p1-btn');
+    const winnerBtn2 = document.querySelector('#winner-p2-btn');
+    const player1Select = document.querySelector('#player1');
+    const player2Select = document.querySelector('#player2');
 
-    const winner = document.querySelector('#winner').value;
-    const loser = document.querySelector('#loser').value;
+    if (winnerBtn1 && winnerBtn2) {
+        winnerBtn1.addEventListener('click', () => {
+            currentWinnerPlayer = 1;
+            updateUI();
+        });
 
-    if (winner === loser) {
-        alert('Winner and Loser cannot be the same person!');
-        return; // Stop the submission
+        winnerBtn2.addEventListener('click', () => {
+            currentWinnerPlayer = 2;
+            updateUI();
+        });
     }
 
-    const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData.entries());
-    
-    // The checkbox value will be 'on' if checked, or null if not.
-    // We can convert this to a proper boolean.
-    data.fouledOnBlack = data.fouledOnBlack === 'on';
-    data.ballsRemaining = parseInt(data.ballsRemaining, 10);
+    if (player1Select) {
+        player1Select.addEventListener('change', updateUI);
+    }
+    if (player2Select) {
+        player2Select.addEventListener('change', updateUI);
+    }
+}
 
-    console.log("Game Logged", data);
+// Add submit handler to the form
+document.querySelector('#log-game-form').addEventListener('submit', async function(event) {
+    event.preventDefault(); 
 
-    const response = await fetch('/api/log-game', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } });
+    const p1Id = document.querySelector('#player1').value;
+    const p2Id = document.querySelector('#player2').value;
+
+    if (!p1Id || !p2Id) {
+        alert('Please select both Player 1 and Player 2.');
+        return;
+    }
+
+    if (p1Id === p2Id) {
+        alert('Player 1 and Player 2 cannot be the same person!');
+        return;
+    }
+
+    const winner = currentWinnerPlayer === 1 ? p1Id : p2Id;
+    const loser = currentWinnerPlayer === 1 ? p2Id : p1Id;
+
+    const ballsRemainingInput = document.querySelector('#balls-remaining').value;
+    const ballsRemaining = parseInt(ballsRemainingInput, 10);
+    const fouledOnBlack = document.querySelector('#fouled-on-black').checked;
+    const date = document.querySelector('#game-date').value;
+
+    const payload = {
+        winner,
+        loser,
+        ballsRemaining,
+        fouledOnBlack,
+        date
+    };
+
+    console.log("Game Logged", payload);
+
+    const response = await fetch('/api/log-game', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' }
+    });
+
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         alert(errorData.message || 'Failed to log game. Please try again.');
         return;
     }
-    // redirect to /
+
+    // Redirect to home/leaderboard
     window.location.href = '/';
 });
 
@@ -89,4 +173,5 @@ document.querySelector('#log-game-form').addEventListener('submit', async functi
 document.addEventListener('DOMContentLoaded', () => {
     populatePlayerDropdown();
     setDefaultDate();
+    setupToggleButtons();
 });

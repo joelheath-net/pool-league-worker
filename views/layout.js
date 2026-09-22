@@ -93,7 +93,7 @@ export const Layout = (props) => {
             <footer>
                 <p>&copy; ${new Date().getFullYear()} St Paul's League. All rights reserved.</p>
                 <p>Sponsored by <a href="https://www.joelheath.net">joelheath.net</a>.</p>
-                <p><a href="/privacy-policy">Privacy Policy</a> | <a href="/terms-of-service">Terms of Service</a></p>
+                <p><a href="/privacy-policy">Privacy Policy</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<a href="/terms-of-service">Terms and Conditions</a></p>
             </footer>
 
             
