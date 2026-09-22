@@ -16,7 +16,7 @@ export const TermsOfServicePage = () => {
                 <h2 style="color: #333; font-size: 1.25em; margin-top: 25px;">2. Eligibility & Access</h2>
                 <p>
                     St Paul's League is an organized sports tracking platform for league players and supporters. 
-                    While public pages (such as the Leaderboard, Game List, and Season Archive) are accessible to all visitors, 
+                    While public pages (such as the <a href="/about" style="color: #007bff;">About page</a>, Leaderboard, Game List, and Season Archive) are accessible to all visitors without logging in, 
                     interactive features (such as logging matches, modifying profiles, or accessing administration tools) require an authorized 
                     Google account included on the league's player whitelist.
                 </p>

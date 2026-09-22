@@ -14,6 +14,7 @@ import { ArchivedLeaderboardPage } from '../views/archived-leaderboard';
 import { SeasonsPage } from '../views/seasons';
 import { PrivacyPolicyPage } from '../views/privacy-policy';
 import { TermsOfServicePage } from '../views/terms-of-service';
+import { AboutPage } from '../views/about';
 
 
 const web = new Hono();
@@ -38,6 +39,10 @@ web.use('*', async (c, next) => {
 // --- Public Routes ---
 web.get('/', (c) => {
     return c.render(<LeaderboardPage />, { title: `St Paul's League`, script: '/js/leaderboard.js' });
+});
+
+web.get('/about', (c) => {
+    return c.render(<AboutPage />, { title: "About - St Paul's League" });
 });
 
 web.get('/game-list', (c) => {
