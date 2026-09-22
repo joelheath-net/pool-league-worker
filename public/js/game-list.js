@@ -90,7 +90,7 @@ async function populateGameList() {
                         </div>
                     </td>
                     ${isAuthenticated 
-                        ? html`<td><div class="table-cell"><a href="{{= it.editUrl }}">Edit</a></div></td>` 
+                        ? html`<td><div class="table-cell"><a href="{{= it.editUrl }}" class="button-small">Edit</a></div></td>` 
                         : ''}
                 </tr>
             `, { playedDate, winnerInfo, loserInfo, fouledText, rematchText, ...game, winnerColor, loserColor, editUrl, isFriendly });

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { protectAPI } from './middleware.js';
 import * as db from './database.js';
+import { calculateOutstandingGames } from './scheduler.js';
 
 const api = new Hono();
 
@@ -37,6 +38,38 @@ api.get('/leaderboard', async (c) => {
 api.get('/game-list', async (c) => {
     const games = await db.getGameList(c.env.DB);
     return c.json(games);
+});
+
+api.get('/outstanding-games', async (c) => {
+    const roundsParam = c.req.query('rounds');
+    let rematchRounds = 2;
+    if (roundsParam !== undefined) {
+        rematchRounds = parseInt(roundsParam, 10);
+        if (isNaN(rematchRounds) || rematchRounds < 1) {
+            return c.json({ message: 'Rematch rounds must be a positive integer of at least 1.' }, 400);
+        }
+        if (rematchRounds > 99) {
+            return c.json({ message: 'Rematch rounds exceeds maximum allowed limit of 99.' }, 400);
+        }
+    }
+
+    try {
+        const [users, games] = await Promise.all([
+            db.getUsers(c.env.DB, { participatingOnly: true }),
+            db.getGameList(c.env.DB)
+        ]);
+
+        const result = calculateOutstandingGames({
+            users,
+            games,
+            rematchRounds,
+            limit: 50
+        });
+
+        return c.json(result);
+    } catch (error) {
+        return c.json({ message: error.message || 'Failed to calculate outstanding games.' }, 400);
+    }
 });
 
 api.get('/archive/:seasonId', async (c) => {

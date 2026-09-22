@@ -5,6 +5,7 @@ import { Layout } from '../views/layout';
 import { LeaderboardPage } from '../views/leaderboard';
 import { LogGamePage } from '../views/log-game';
 import { GamesPage } from '../views/game-list';
+import { OutstandingGamesPage } from '../views/outstanding-games';
 import { AuditPage } from '../views/audit-log';
 import { CustomizePage } from '../views/customize';
 import { EditGamePage } from '../views/edit-game';
@@ -41,6 +42,15 @@ web.get('/', (c) => {
 
 web.get('/game-list', (c) => {
     return c.render(<GamesPage isAuthenticated={c.get('isAuthenticated')} />, { title: 'Game History', script: '/js/game-list.js' });
+});
+
+web.get('/outstanding-games', (c) => {
+    const roundsParam = c.req.query('rounds');
+    const rounds = roundsParam ? parseInt(roundsParam, 10) : 2;
+    return c.render(
+        <OutstandingGamesPage rounds={isNaN(rounds) || rounds < 1 ? 2 : rounds} isAuthenticated={c.get('isAuthenticated')} />,
+        { title: 'Outstanding Games', script: '/js/outstanding-games.js' }
+    );
 });
 
 web.get('/seasons', (c) => {

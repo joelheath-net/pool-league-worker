@@ -439,3 +439,126 @@ header nav a:hover, header nav a.active {
     cursor: pointer;
     vertical-align: middle;
 }
+
+.subtitle-container {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+/* Fixture Controls & Outstanding Games */
+.fixtures-controls-card {
+    background-color: #fff;
+    padding: 18px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    max-width: 640px;
+    margin: 0 auto 24px auto;
+    border: 1px solid #dee2e6;
+}
+
+.fixtures-controls-form {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    max-width: none;
+}
+
+.fixtures-controls-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.fixtures-controls-inline {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.fixtures-rounds-input {
+    width: 90px !important;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 1.05rem;
+    padding: 8px 12px !important;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.button-primary {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 4px;
+    transition: background-color 0.2s, transform 0.1s;
+    width: auto;
+    flex-grow: 1;
+}
+
+.button-primary:hover {
+    background-color: #0056b3;
+}
+
+.button-small {
+    display: inline-block;
+    background-color: #28a745;
+    color: white !important;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.button-small:hover {
+    background-color: #218838;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.fixtures-summary-banner {
+    background-color: #e8f4fd;
+    border-left: 4px solid #007bff;
+    color: #0c5460;
+    padding: 12px 18px;
+    border-radius: 4px;
+    margin: 0 auto 24px auto;
+    max-width: 640px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.fixtures-summary-banner p {
+    margin: 0;
+}
+
+.secondary-link {
+    color: #6c757d;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.secondary-link:hover {
+    color: #007bff;
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .fixtures-controls-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .fixtures-rounds-input {
+        width: 100% !important;
+    }
+}

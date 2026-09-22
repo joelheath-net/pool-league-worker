@@ -3,7 +3,11 @@ export const GamesPage = ({ isAuthenticated }) => {
 
     return (
         <div class="container" data-is-authenticated={isAuthenticated}>
-            <h1 class="centre-title">Game History</h1>
+            <h1 class="centre-title" style="margin-bottom: 8px;">Game History</h1>
+            <div class="subtitle-container">
+                <a href="/outstanding-games" class="secondary-link">Determine Outstanding Games</a>
+            </div>
+
             <div class="table-container">
                 <table>
                     <thead>

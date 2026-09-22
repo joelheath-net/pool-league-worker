@@ -27,6 +27,16 @@ async function populatePlayerDropdown() {
         winnerSelect.appendChild(optionsFragment.cloneNode(true));
         loserSelect.appendChild(optionsFragment.cloneNode(true));
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const player1Param = urlParams.get('player1');
+        const player2Param = urlParams.get('player2');
+        if (player1Param && users.some(u => u.id === player1Param)) {
+            winnerSelect.value = player1Param;
+        }
+        if (player2Param && users.some(u => u.id === player2Param)) {
+            loserSelect.value = player2Param;
+        }
+
     } catch (error) {
         console.error("Error populating player dropdowns:", error);
         winnerSelect.innerHTML = html`<option value="">Error loading players</option>`;
