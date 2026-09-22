@@ -11,6 +11,8 @@ import { EditGamePage } from '../views/edit-game';
 import { AdminPage } from '../views/admin-panel';
 import { ArchivedLeaderboardPage } from '../views/archived-leaderboard';
 import { SeasonsPage } from '../views/seasons';
+import { PrivacyPolicyPage } from '../views/privacy-policy';
+import { TermsOfServicePage } from '../views/terms-of-service';
 
 
 const web = new Hono();
@@ -52,6 +54,22 @@ web.get('/archive', (c) => {
 web.get('/archive/:seasonId', (c) => {
     const { seasonId } = c.req.param();
     return c.render(<ArchivedLeaderboardPage seasonId={seasonId} />, { title: `Archived Season ${seasonId}`, script: '/js/archived-leaderboard.js' });
+});
+
+web.get('/privacy-policy', (c) => {
+    return c.render(<PrivacyPolicyPage />, { title: "Privacy Policy - St Paul's League" });
+});
+
+web.get('/privacy', (c) => {
+    return c.redirect('/privacy-policy');
+});
+
+web.get('/terms-of-service', (c) => {
+    return c.render(<TermsOfServicePage />, { title: "Terms of Service - St Paul's League" });
+});
+
+web.get('/terms', (c) => {
+    return c.redirect('/terms-of-service');
 });
 
 // --- Protected Routes ---
