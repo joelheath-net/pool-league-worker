@@ -30,11 +30,11 @@ export const OutstandingGamesPage = ({ rounds = 2, isAuthenticated = false }) =>
                 <table>
                     <thead>
                         <tr>
-                            <th><div class="table-cell">Player 1</div></th>
-                            <th><div class="table-cell">Player 2</div></th>
-                            <th><div class="table-cell">Rematch Round</div></th>
+                            <th scope="col"><div class="table-cell">Player 1</div></th>
+                            <th scope="col"><div class="table-cell">Player 2</div></th>
+                            <th scope="col"><div class="table-cell">Rematch Round</div></th>
                             {isAuthenticated
-                                ? <th><div class="table-cell">Log Game</div></th>
+                                ? <th scope="col"><div class="table-cell">Log Game</div></th>
                                 : ''}
                         </tr>
                     </thead>

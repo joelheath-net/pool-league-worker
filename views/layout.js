@@ -1,12 +1,17 @@
 import { html } from 'hono/html'
 import { MobileStyles } from './mobile-style';
 
-const Head = ({ title, style, cutoff }) => {
+const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
+    const defaultDescription = "Track upcoming fixtures, past results, and league standings for St Paul's Pool League.";
+    const metaDescription = description || defaultDescription;
+    const pageCanonicalUrl = canonicalUrl || "https://stpaulsleague.joelheath.net";
+
     return html`
         <head>
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <title>${title}</title>
+            <link rel="canonical" href="${pageCanonicalUrl}" />
 
             <!-- Favicon and Apple Touch Icons -->
             <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
@@ -14,21 +19,68 @@ const Head = ({ title, style, cutoff }) => {
             <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
             <link rel="manifest" href="/site.webmanifest" />
 
-            <!-- Discord -->
-            <meta property="og:title" content="St Paul's League" />
-            <meta property="og:description" content="${title}" />
+            <!-- Open Graph / Discord -->
+            <meta property="og:title" content="${title}" />
+            <meta property="og:description" content="${metaDescription}" />
             <meta property="og:image" content="https://stpaulsleague.joelheath.net/images/logo-hd.jpg" />
-            <meta name="theme-color" content="#f4f4f9" />
-            <meta name="twitter:card" content="summary_large_image" />
+            <meta property="og:image:width" content="640" />
+            <meta property="og:image:height" content="640" />
+            <meta property="og:image:alt" content="St Paul's Pool League Logo" />
+            <meta property="og:url" content="${pageCanonicalUrl}" />
+            <meta property="og:site_name" content="St Paul's League" />
+            <meta property="og:locale" content="en_GB" />
+            <meta property="og:type" content="website" />
+            <meta name="theme-color" content="#fd7c28" />
 
-            <!-- Meta Tags -->
+            <!-- Twitter / X -->
+            <meta name="twitter:card" content="summary" />
+            <meta name="twitter:title" content="${title}" />
+            <meta name="twitter:description" content="${metaDescription}" />
+            <meta name="twitter:image" content="https://stpaulsleague.joelheath.net/images/logo-hd.jpg" />
+            <meta name="twitter:image:alt" content="St Paul's Pool League Logo" />
+
+            <!-- Meta Tags & SEO -->
             <meta name="application-name" content="St Paul's League" lang="en" />
             <meta name="apple-mobile-web-app-title" content="St Paul's" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-            <meta name="description" content="${title}" />
+            <meta name="description" content="${metaDescription}" />
+            ${robots ? html`<meta name="robots" content="${robots}" />` : ''}
             <meta name="author" content="Joel Heath" />
-            <meta name="keywords" content="St Paul's League, Pool, St Paul, League, Billiards, Snooker, Sports, Competition, Tournament, Teams, Fixtures, Results, Rankings, Table, Players, Matches, Scores, Schedule, Club, Community, UK, Local, Social, Game, Cue Sports" />
-            <meta name="msapplication-TileColor" content="#f4f4f9" />
+            <meta name="msapplication-TileColor" content="#fd7c28" />
+
+            <!-- Schema.org Structured Data -->
+            <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@graph": [
+                    {
+                        "@type": "SportsOrganization",
+                        "@id": "https://stpaulsleague.joelheath.net/#organization",
+                        "name": "St Paul's League",
+                        "alternateName": "St Paul's Pool League",
+                        "url": "https://stpaulsleague.joelheath.net",
+                        "logo": "https://stpaulsleague.joelheath.net/images/logo-hd.jpg",
+                        "sport": "8-Ball Pool",
+                        "description": "Official tournament management and live standings platform for St Paul's Pool League.",
+                        "founder": {
+                            "@type": "Person",
+                            "name": "Joel Heath",
+                            "url": "https://www.joelheath.net"
+                        }
+                    },
+                    {
+                        "@type": "WebSite",
+                        "@id": "https://stpaulsleague.joelheath.net/#website",
+                        "url": "https://stpaulsleague.joelheath.net",
+                        "name": "St Paul's League",
+                        "publisher": {
+                            "@id": "https://stpaulsleague.joelheath.net/#organization"
+                        },
+                        "inLanguage": "en-GB"
+                    }
+                ]
+            }
+            </script>
             
             <!-- Stylesheets -->
             <link rel="stylesheet" href="/css/style.css" />
@@ -83,7 +135,7 @@ export const Layout = (props) => {
     return html`
         <!DOCTYPE html>
         <html lang="en">
-        ${<Head title={props.title} style={style} cutoff={cutoff} />}
+        ${<Head title={props.title} description={props.description} robots={props.robots} style={style} cutoff={cutoff} canonicalUrl={props.canonicalUrl} />}
         <body>
             ${<Header isAuthenticated={props.isAuthenticated} isAdmin={props.isAdmin} />}
 

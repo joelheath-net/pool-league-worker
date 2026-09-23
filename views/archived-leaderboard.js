@@ -33,15 +33,15 @@ export const ArchivedLeaderboardPage = ({ seasonId }) => {
                     <table>
                         <thead>
                             <tr>
-                                <th class="sticky" style="background-color: #e9ecef;"><div class="table-cell">Player</div></th>
-                                <th><div class="table-cell">Team Name</div></th>
-                                <th><div class="table-cell">Points</div></th>
-                                <th><div class="table-cell">Wins</div></th>
-                                <th><div class="table-cell">Losses</div></th>
-                                <th><div class="table-cell">Fouls on Black</div></th>
-                                <th><div class="table-cell">Ball Difference</div></th>
-                                <th><div class="table-cell">Played</div></th>
-                                <th><div class="table-cell">Win:Loss Ratio</div></th>
+                                <th scope="col" class="sticky" style="background-color: #e9ecef;"><div class="table-cell">Player</div></th>
+                                <th scope="col"><div class="table-cell">Team Name</div></th>
+                                <th scope="col"><div class="table-cell">Points</div></th>
+                                <th scope="col"><div class="table-cell">Wins</div></th>
+                                <th scope="col"><div class="table-cell">Losses</div></th>
+                                <th scope="col"><div class="table-cell">Fouls on Black</div></th>
+                                <th scope="col"><div class="table-cell">Ball Difference</div></th>
+                                <th scope="col"><div class="table-cell">Played</div></th>
+                                <th scope="col"><div class="table-cell">Win:Loss Ratio</div></th>
                             </tr>
                         </thead>
                         <tbody id="archive-body">
