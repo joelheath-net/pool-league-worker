@@ -1,1 +1,90 @@
-{"name":"","short_name":"","icons":[{"src":"/android-chrome-192x192.png","sizes":"192x192","type":"image/png"},{"src":"/android-chrome-512x512.png","sizes":"512x512","type":"image/png"}],"theme_color":"#ffffff","background_color":"#ffffff","display":"standalone"}
+{
+  "name": "St Paul's League",
+  "short_name": "St Paul's",
+  "description": "Track upcoming fixtures, past results, and league standings.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#fd7c28",
+  "background_color": "#f4f4f9",
+  "icons": [
+    {
+      "src": "/images/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshots/desktop-leaderboard.png",
+      "sizes": "1122x708",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Leaderboard"
+    },
+    {
+      "src": "/images/screenshots/desktop-history.png",
+      "sizes": "1122x708",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Game History"
+    },
+    {
+      "src": "/images/screenshots/desktop-outstanding.png",
+      "sizes": "1122x708",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Outstanding Games"
+    },
+    {
+      "src": "/images/screenshots/desktop-archive.png",
+      "sizes": "1122x708",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Season Archive"
+    },
+    {
+      "src": "/images/screenshots/mobile-leaderboard.png",
+      "sizes": "810x1470",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Leaderboard"
+    },
+    {
+      "src": "/images/screenshots/mobile-history.png",
+      "sizes": "810x1470",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Game History"
+    },
+    {
+      "src": "/images/screenshots/mobile-outstanding.png",
+      "sizes": "810x1470",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Outstanding Games"
+    },
+    {
+      "src": "/images/screenshots/mobile-archive.png",
+      "sizes": "810x1470",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Season Archive"
+    }
+  ]
+}

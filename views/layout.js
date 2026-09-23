@@ -23,6 +23,8 @@ const Head = ({ title, style, cutoff }) => {
 
             <!-- Meta Tags -->
             <meta name="application-name" content="St Paul's League" lang="en" />
+            <meta name="apple-mobile-web-app-title" content="St Paul's" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
             <meta name="description" content="${title}" />
             <meta name="author" content="Joel Heath" />
             <meta name="keywords" content="St Paul's League, Pool, St Paul, League, Billiards, Snooker, Sports, Competition, Tournament, Teams, Fixtures, Results, Rankings, Table, Players, Matches, Scores, Schedule, Club, Community, UK, Local, Social, Game, Cue Sports" />
