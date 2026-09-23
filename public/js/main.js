@@ -21,16 +21,153 @@ function getContrastingTextColor(hexColor) {
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const hamburgerMenu = document.querySelector('.hamburger-menu');
-    const nav = document.querySelector('header nav');
+function initHeader() {
+    const header = document.querySelector('header');
+    if (!header) return;
+
+    const hamburgerMenu = header.querySelector('.hamburger-menu') || document.querySelector('.hamburger-menu');
+    const nav = header.querySelector('nav');
+    const logo = header.querySelector('.logo');
 
     if (hamburgerMenu && nav) {
         hamburgerMenu.addEventListener('click', () => {
             nav.classList.toggle('is-active');
         });
     }
-});
+
+    if (!logo || !nav) return;
+
+    let lastKnownNavWidth = 0;
+    let lastKnownLogoWidth = 0;
+
+    function getAvailableContentWidth() {
+        const cs = window.getComputedStyle(header);
+        const pl = parseFloat(cs.paddingLeft) || 0;
+        const pr = parseFloat(cs.paddingRight) || 0;
+        return header.clientWidth - pl - pr;
+    }
+
+    function measureDesktopNavWidth() {
+        if (lastKnownNavWidth > 0 && !header.classList.contains('is-mobile-nav')) {
+            const measured = Math.ceil(nav.getBoundingClientRect().width);
+            if (measured > 0) {
+                lastKnownNavWidth = measured;
+                return measured;
+            }
+        }
+
+        const wasMobile = header.classList.contains('is-mobile-nav');
+        if (wasMobile) {
+            header.classList.remove('is-mobile-nav');
+        }
+
+        const clone = nav.cloneNode(true);
+        clone.style.cssText = 'position: absolute !important; top: -9999px !important; left: -9999px !important; display: inline-flex !important; flex-direction: row !important; width: max-content !important; max-width: none !important; visibility: hidden !important; pointer-events: none !important; white-space: nowrap !important;';
+        clone.classList.remove('is-active');
+
+        const links = clone.querySelectorAll('a');
+        links.forEach((a) => {
+            a.style.width = 'auto';
+            a.style.display = 'inline-block';
+            a.style.whiteSpace = 'nowrap';
+        });
+
+        header.appendChild(clone);
+        const measured = Math.ceil(clone.getBoundingClientRect().width || clone.offsetWidth);
+        header.removeChild(clone);
+
+        if (wasMobile) {
+            header.classList.add('is-mobile-nav');
+        }
+
+        if (measured > 0) {
+            lastKnownNavWidth = measured;
+        }
+
+        return lastKnownNavWidth;
+    }
+
+    function checkFit() {
+        const isMobile = header.classList.contains('is-mobile-nav');
+        const minGap = 25; // Natural breathing room between logo and navigation links
+
+        if (!isMobile) {
+            // Live desktop mode: check actual on-screen positions
+            const logoRect = logo.getBoundingClientRect();
+            const navRect = nav.getBoundingClientRect();
+
+            // Wait until elements are laid out
+            if (logoRect.width === 0 || navRect.width === 0) return;
+
+            lastKnownLogoWidth = Math.ceil(logoRect.width);
+            lastKnownNavWidth = Math.ceil(navRect.width);
+
+            const currentGap = navRect.left - logoRect.right;
+            const isWrapping = navRect.top > (logoRect.bottom - 4);
+
+            // Switch to mobile only when the elements are about to collide or wrap
+            if (currentGap < minGap || isWrapping) {
+                header.classList.add('is-mobile-nav');
+            }
+        } else {
+            // Mobile mode: determine if available header width can fit desktop elements
+            const availableWidth = getAvailableContentWidth();
+            const navWidth = lastKnownNavWidth > 0 ? lastKnownNavWidth : measureDesktopNavWidth();
+            const logoWidth = lastKnownLogoWidth > 0 ? lastKnownLogoWidth : Math.ceil(logo.getBoundingClientRect().width);
+
+            const neededWidth = logoWidth + navWidth + minGap;
+
+            // Switch back to desktop with 10px hysteresis to prevent jitter/flapping
+            if (availableWidth >= neededWidth + 10) {
+                header.classList.remove('is-mobile-nav');
+                nav.classList.remove('is-active');
+
+                // Update exact measurements from live DOM layout
+                requestAnimationFrame(() => {
+                    const nr = nav.getBoundingClientRect();
+                    const lr = logo.getBoundingClientRect();
+                    if (nr.width > 0) lastKnownNavWidth = Math.ceil(nr.width);
+                    if (lr.width > 0) lastKnownLogoWidth = Math.ceil(lr.width);
+                });
+            }
+        }
+    }
+
+    // Initial measurement & layout check
+    measureDesktopNavWidth();
+    lastKnownLogoWidth = Math.ceil(logo.getBoundingClientRect().width);
+    checkFit();
+
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+            measureDesktopNavWidth();
+            lastKnownLogoWidth = Math.ceil(logo.getBoundingClientRect().width);
+            checkFit();
+        });
+    }
+
+    window.addEventListener('resize', checkFit, { passive: true });
+
+    if ('windowControlsOverlay' in navigator) {
+        navigator.windowControlsOverlay.addEventListener('geometrychange', () => {
+            checkFit();
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
+
+    if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => {
+            checkFit();
+        });
+        ro.observe(header);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHeader);
+} else {
+    initHeader();
+}
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

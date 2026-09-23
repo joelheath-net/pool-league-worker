@@ -5,9 +5,13 @@
   "start_url": "/",
   "id": "/",
   "scope": "/",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "display": "standalone",
   "orientation": "any",
-  "theme_color": "#fd7c28",
+  "theme_color": "#ffffff",
   "background_color": "#f4f4f9",
   "icons": [
     {

@@ -30,7 +30,7 @@ const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
             <meta property="og:site_name" content="St Paul's League" />
             <meta property="og:locale" content="en_GB" />
             <meta property="og:type" content="website" />
-            <meta name="theme-color" content="#fd7c28" />
+            <meta name="theme-color" content="#ffffff" />
 
             <!-- Twitter / X -->
             <meta name="twitter:card" content="summary" />
@@ -117,8 +117,8 @@ const Header = ({ isAuthenticated, isAdmin }) => {
 
     return html`
         <header>
-            <div class="logo" style="display: inline-flex; align-items: center; gap: 8px;">
-                <a href="/" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center;">St Paul's League</a>
+            <div class="logo" style="display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0;">
+                <a href="/" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;">St Paul's League</a>
                 <a
                     href="https://www.instagram.com/stpaulsleague/"
                     target="_blank"
@@ -155,7 +155,7 @@ const Header = ({ isAuthenticated, isAdmin }) => {
 };
 
 export const Layout = (props) => {
-    const cutoff = props.isAdmin ? "1250px" : props.isAuthenticated ? "1080px" : "600px";
+    const cutoff = "500px";
     const style = props.style ? html`<link rel="stylesheet" href="${props.style}" />` : '';
     const script = props.script ? html`<script src="${props.script}"></script>` : '';
 
@@ -172,7 +172,7 @@ export const Layout = (props) => {
 
             <footer>
                 <p>&copy; ${new Date().getFullYear()} St Paul's League. All rights reserved.</p>
-                <p>Sponsored by <a href="https://www.joelheath.net">joelheath.net</a>.</p>
+                <p>Sponsored by&nbsp;<a target="_blank" rel="noopener noreferrer" href="https://www.joelheath.net">joelheath.net</a>.</p>
                 <p><a href="/about">About</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<a href="/privacy-policy">Privacy Policy</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<a href="/terms-of-service">Terms and Conditions</a></p>
             </footer>
 

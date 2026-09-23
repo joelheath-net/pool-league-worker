@@ -1,4 +1,4 @@
-const CACHE_NAME = 'st-pauls-league-v1';
+const CACHE_NAME = 'st-pauls-league-v1'; // only increment on major structural / emergency reset, as network-first approach will auto-update app anyway.
 const PRECACHE_ASSETS = [
     '/',
     '/site.webmanifest',
