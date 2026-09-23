@@ -21,6 +21,10 @@ h2 {
     margin-bottom: 30px;
 }
 
+.centre-title.leaderboard-title {
+    margin-bottom: 0;
+}
+
 .centre-container {
     max-width: 800px;
     margin: 0 auto;
@@ -320,6 +324,10 @@ header nav a:hover, header nav a.active {
     border-left: 5px solid #28a745;
 }
 
+.season-card.all-time-season {
+    border-left: 5px solid #fd7e14;
+}
+
 .season-card-info {
     display: flex;
     align-items: center;
@@ -345,6 +353,19 @@ header nav a:hover, header nav a.active {
     letter-spacing: 0.5px;
 }
 
+.badge-dynamic-season {
+    display: inline-block;
+    background-color: #ffe8cc;
+    color: #d9480f;
+    border: 1px solid #ffd8a8;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .badge-archived-season {
     display: inline-block;
     background-color: #e9ecef;
@@ -354,6 +375,195 @@ header nav a:hover, header nav a.active {
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
+}
+
+/* Leaderboard Wrapper & Controls */
+.leaderboard-wrapper {
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    position: relative;
+}
+
+.leaderboard-wrapper .table-container {
+    margin-top: 2px;
+    margin-bottom: 20px;
+}
+
+.leaderboard-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    height: 28px;
+    margin: 0 auto;
+}
+
+.sort-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    background-color: #ffffff;
+    color: #495057;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.sort-toggle-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.sort-chevron-icon {
+    display: block;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+    pointer-events: none;
+}
+
+.sort-panel {
+    display: none;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Expanded state when user opens the sort panel */
+.leaderboard-controls.is-open {
+    height: auto;
+    min-height: 28px;
+    margin: 0 auto;
+}
+
+.leaderboard-controls.is-open .sort-panel {
+    display: flex;
+    animation: sortFadeIn 0.15s ease-in-out;
+}
+
+.leaderboard-controls.is-open .sort-toggle-btn {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    color: #212529;
+}
+
+.leaderboard-controls.is-open .sort-chevron-icon {
+    transform: rotate(180deg);
+}
+
+@keyframes sortFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-2px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.sort-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    padding: 5px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.sort-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.sort-select {
+    width: auto;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    color: #212529;
+    cursor: pointer;
+    outline: none;
+    line-height: 1.4;
+    transition: border-color 0.15s ease-in-out;
+}
+
+.sort-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+
+.sort-order-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    outline: none;
+    border: 1px solid transparent;
+}
+
+#sort-order-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.sort-order-btn.sort-desc {
+    background-color: #fff5f5;
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.sort-order-btn.sort-desc:hover {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+
+.sort-order-btn.sort-asc {
+    background-color: #f0fff4;
+    color: #28a745;
+    border-color: #28a745;
+}
+
+.sort-order-btn.sort-asc:hover {
+    background-color: #28a745;
+    color: #ffffff;
 }
 
 .season-card-arrow {

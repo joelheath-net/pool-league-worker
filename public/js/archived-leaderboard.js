@@ -1,6 +1,8 @@
+let currentArchivedPlayers = [];
+
 async function populateArchive() {
     const container = document.querySelector('.container');
-    const seasonId = container.dataset.seasonId;
+    const seasonId = container?.dataset?.seasonId;
     const tableBody = document.querySelector('#archive-body');
     const seasonNameEl = document.querySelector('#season-name');
 
@@ -9,43 +11,42 @@ async function populateArchive() {
         if (!response.ok) throw new Error('Failed to fetch archive data');
         const { seasonInfo, leaderboard } = await response.json();
 
-        seasonNameEl.textContent = seasonInfo.name;
+        if (seasonNameEl) {
+            seasonNameEl.textContent = seasonInfo?.name || 'Archived Season';
+        }
 
-        // Sort data: points descending, ballsRemaining ascending, foulsOnBlack ascending
-        leaderboard.sort((a, b) => {
-            if (b.points !== a.points) {
-                return b.points - a.points;
-            }
-            if (a.ballsRemaining !== b.ballsRemaining) {
-                return a.ballsRemaining - b.ballsRemaining;
-            }
-            return a.foulsOnBlack - b.foulsOnBlack;
-        });
-
-        const rowsHtml = leaderboard.map(playerStats => {
+        currentArchivedPlayers = leaderboard.map(playerStats => {
+            const played = playerStats.wins + playerStats.losses;
+            const winLossRatio = playerStats.losses > 0
+                ? (playerStats.wins / playerStats.losses).toFixed(2)
+                : (playerStats.wins > 0 ? "∞" : "0.00");
+            const ratioNumeric = playerStats.losses > 0
+                ? (playerStats.wins / playerStats.losses)
+                : (playerStats.wins > 0 ? Infinity : 0);
             const color = playerStats.teamColor || '#ffffff';
             const textColor = getContrastingTextColor(color);
-            const winLossRatio = playerStats.losses > 0 ? (playerStats.wins / playerStats.losses).toFixed(2) : (playerStats.wins > 0 ? "∞" : "0.00");
 
-            return eta.render(html`
-                <tr>
-                    <td class="sticky" style="background-color: {{= it.color }}"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.name }}</div></td>
-                    <td style="background-color: {{= it.color }}"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.team }}</div></td>
-                    <td><div class="table-cell">{{= it.points }}</div></td>
-                    <td><div class="table-cell">{{= it.wins }}</div></td>
-                    <td><div class="table-cell">{{= it.losses }}</div></td>
-                    <td><div class="table-cell">{{= it.foulsOnBlack }}</div></td>
-                    <td><div class="table-cell">{{= it.ballsRemaining }}</div></td>
-                    <td><div class="table-cell">{{= it.winLossRatio }}</div></td>
-                </tr>
-            `, { ...playerStats, color, textColor, winLossRatio });
-        }).join('');
+            return {
+                ...playerStats,
+                played,
+                winLossRatio,
+                ratioNumeric,
+                color,
+                textColor
+            };
+        });
 
-        tableBody.innerHTML = rowsHtml;
+        setupLeaderboardControls({
+            getData: () => currentArchivedPlayers,
+            onRender: (sorted) => renderLeaderboardRows(sorted, '#archive-body')
+        });
+
     } catch (error) {
         console.error('Error building archive:', error);
-        seasonNameEl.textContent = 'Archive Not Found';
-        tableBody.innerHTML = html`<tr><td colspan="7"><div class="table-cell">Failed to load archive.</div></td></tr>`;
+        if (seasonNameEl) seasonNameEl.textContent = 'Archive Not Found';
+        if (tableBody) {
+            tableBody.innerHTML = html`<tr><td colspan="9"><div class="table-cell">Failed to load archive.</div></td></tr>`;
+        }
     }
 }
 

@@ -11,6 +11,7 @@ import { CustomizePage } from '../views/customize';
 import { EditGamePage } from '../views/edit-game';
 import { AdminPage } from '../views/admin-panel';
 import { ArchivedLeaderboardPage } from '../views/archived-leaderboard';
+import { AllTimeLeaderboardPage } from '../views/all-time-leaderboard';
 import { SeasonsPage } from '../views/seasons';
 import { PrivacyPolicyPage } from '../views/privacy-policy';
 import { TermsOfServicePage } from '../views/terms-of-service';
@@ -64,6 +65,14 @@ web.get('/seasons', (c) => {
 
 web.get('/archive', (c) => {
     return c.redirect('/seasons');
+});
+
+web.get('/archive/all-time', (c) => {
+    return c.render(<AllTimeLeaderboardPage />, { title: "All-Time Standings - St Paul's League", script: '/js/all-time-leaderboard.js' });
+});
+
+web.get('/all-time', (c) => {
+    return c.redirect('/archive/all-time');
 });
 
 web.get('/archive/:seasonId', (c) => {

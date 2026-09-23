@@ -298,6 +298,150 @@ export const getArchivedSeasons = async (db) => {
     return keysToCamel(results);
 };
 
+export const getAllTimeLeaderboardStats = async (db) => {
+    // 1. Get all users (both participating and non-participating)
+    const { results: userResults } = await db.prepare(
+        'SELECT id, name, team, team_color, participating FROM users'
+    ).all();
+    const users = keysToCamel(userResults);
+
+    const players = new Map();
+    for (const user of users) {
+        players.set(user.id, {
+            playerId: user.id,
+            name: user.name,
+            team: user.team,
+            teamColor: user.teamColor || '#ffffff',
+            participating: Boolean(user.participating),
+            wins: 0,
+            losses: 0,
+            foulsOnBlack: 0,
+            ballsRemaining: 0,
+            points: 0,
+        });
+    }
+
+    // 2. Aggregate stats from all archived seasons
+    const { results: archiveResults } = await db.prepare(`
+        SELECT
+            player_id,
+            name,
+            team,
+            team_color,
+            wins,
+            losses,
+            fouls_on_black,
+            balls_remaining,
+            points
+        FROM archived_tables
+        ORDER BY season_id ASC
+    `).all();
+    const archivedRows = keysToCamel(archiveResults);
+
+    for (const row of archivedRows) {
+        if (!players.has(row.playerId)) {
+            players.set(row.playerId, {
+                playerId: row.playerId,
+                name: row.name,
+                team: row.team,
+                teamColor: row.teamColor || '#ffffff',
+                participating: false,
+                wins: 0,
+                losses: 0,
+                foulsOnBlack: 0,
+                ballsRemaining: 0,
+                points: 0,
+            });
+        }
+        const player = players.get(row.playerId);
+        player.wins += row.wins;
+        player.losses += row.losses;
+        player.foulsOnBlack += row.foulsOnBlack;
+        player.ballsRemaining += row.ballsRemaining;
+
+        // If player is not currently in users table, preserve archived identity
+        if (!users.some(u => u.id === row.playerId)) {
+            player.name = row.name;
+            player.team = row.team;
+            player.teamColor = row.teamColor || '#ffffff';
+        }
+    }
+
+    // 3. Tally all current season games (all players, not just participating)
+    const games = await getGameList(db);
+    for (const game of games) {
+        const { player1Id, player2Id, winnerId, ballsRemaining, fouledOnBlack } = game;
+        const winner = winnerId;
+        const loser = winnerId === player1Id ? player2Id : player1Id;
+
+        if (!players.has(winner)) {
+            players.set(winner, {
+                playerId: winner,
+                name: 'Unknown Player',
+                team: 'My Team',
+                teamColor: '#ffffff',
+                participating: false,
+                wins: 0,
+                losses: 0,
+                foulsOnBlack: 0,
+                ballsRemaining: 0,
+                points: 0,
+            });
+        }
+        if (!players.has(loser)) {
+            players.set(loser, {
+                playerId: loser,
+                name: 'Unknown Player',
+                team: 'My Team',
+                teamColor: '#ffffff',
+                participating: false,
+                wins: 0,
+                losses: 0,
+                foulsOnBlack: 0,
+                ballsRemaining: 0,
+                points: 0,
+            });
+        }
+
+        players.get(winner).wins++;
+        players.get(loser).losses++;
+        players.get(loser).ballsRemaining += ballsRemaining;
+        if (fouledOnBlack) {
+            players.get(loser).foulsOnBlack++;
+        }
+    }
+
+    // 4. Calculate points, played, and win/loss ratio for each player
+    const leaderboard = Array.from(players.values()).map(player => {
+        const points = player.wins * 3 + player.losses - player.foulsOnBlack;
+        const played = player.wins + player.losses;
+        const winLossRatio = player.losses > 0
+            ? (player.wins / player.losses).toFixed(2)
+            : (player.wins > 0 ? "∞" : "0.00");
+        const ratioNumeric = player.losses > 0
+            ? (player.wins / player.losses)
+            : (player.wins > 0 ? Infinity : 0);
+
+        return {
+            ...player,
+            points,
+            played,
+            winLossRatio,
+            ratioNumeric,
+        };
+    });
+
+    // 5. Default sort: points descending, ballsRemaining ascending, foulsOnBlack ascending
+    leaderboard.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (a.ballsRemaining !== b.ballsRemaining) return a.ballsRemaining - b.ballsRemaining;
+        return a.foulsOnBlack - b.foulsOnBlack;
+    });
+
+    return leaderboard;
+};
+
+
 export const archiveSeason = async (db, seasonName) => {
     // 1. Get the current leaderboard stats
     const leaderboardStats = await getLeaderboardStats(db);

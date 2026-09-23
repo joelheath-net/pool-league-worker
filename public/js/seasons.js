@@ -15,6 +15,13 @@ async function populateSeasons() {
                 </div>
                 <div class="season-card-arrow">&rarr;</div>
             </a>
+            <a href="/archive/all-time" class="season-card all-time-season">
+                <div class="season-card-info">
+                    <span class="season-card-title">All-Time Leaderboard</span>
+                    <span class="badge-dynamic-season">Dynamic</span>
+                </div>
+                <div class="season-card-arrow">&rarr;</div>
+            </a>
         `;
 
         if (seasons.length > 0) {
@@ -43,6 +50,13 @@ async function populateSeasons() {
                 <div class="season-card-info">
                     <span class="season-card-title">Current Season</span>
                     <span class="badge-active-season">Active</span>
+                </div>
+                <div class="season-card-arrow">&rarr;</div>
+            </a>
+            <a href="/archive/all-time" class="season-card all-time-season">
+                <div class="season-card-info">
+                    <span class="season-card-title">All-Time Leaderboard</span>
+                    <span class="badge-dynamic-season">Dynamic</span>
                 </div>
                 <div class="season-card-arrow">&rarr;</div>
             </a>

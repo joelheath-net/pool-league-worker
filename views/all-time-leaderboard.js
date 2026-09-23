@@ -1,7 +1,7 @@
-export const LeaderboardPage = () => {
+export const AllTimeLeaderboardPage = () => {
     return (
         <div class="container">
-            <h1 class="centre-title leaderboard-title">Current Standings</h1>
+            <h1 class="centre-title leaderboard-title">All-Time Leaderboard</h1>
 
             <div class="leaderboard-wrapper">
                 <div class="leaderboard-controls">
@@ -44,10 +44,10 @@ export const LeaderboardPage = () => {
                                 <th><div class="table-cell">Win:Loss Ratio</div></th>
                             </tr>
                         </thead>
-                        <tbody id="leaderboard-body">
+                        <tbody id="all-time-body">
                             <tr>
                                 <td colspan="9" style="text-align: center;">
-                                    <div class="table-cell">Loading...</div>
+                                    <div class="table-cell">Loading all-time stats...</div>
                                 </td>
                             </tr>
                         </tbody>

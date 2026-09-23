@@ -72,6 +72,16 @@ api.get('/outstanding-games', async (c) => {
     }
 });
 
+api.get('/all-time-leaderboard', async (c) => {
+    const leaderboard = await db.getAllTimeLeaderboardStats(c.env.DB);
+    return c.json(leaderboard);
+});
+
+api.get('/archive/all-time', async (c) => {
+    const leaderboard = await db.getAllTimeLeaderboardStats(c.env.DB);
+    return c.json(leaderboard);
+});
+
 api.get('/archive/:seasonId', async (c) => {
     const { seasonId } = c.req.param();
     const seasonInfo = await db.getArchivedSeasonInfo(c.env.DB, seasonId);
