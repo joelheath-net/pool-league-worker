@@ -1,4 +1,4 @@
-const CACHE_NAME = 'st-pauls-league-v2';
+const CACHE_NAME = 'st-pauls-league-v1';
 const PRECACHE_ASSETS = [
     '/',
     '/site.webmanifest',
@@ -76,7 +76,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static assets (CSS, JS, images, fonts): Cache-first with network fallback
+    // Static assets (CSS, JS, images, fonts): Network-first with cache fallback
     if (
         url.pathname.startsWith('/css/') ||
         url.pathname.startsWith('/js/') ||
@@ -84,20 +84,8 @@ self.addEventListener('fetch', (event) => {
         url.pathname === '/site.webmanifest'
     ) {
         event.respondWith(
-            caches.match(request).then((cachedResponse) => {
-                if (cachedResponse) {
-                    // Update cache in the background
-                    fetch(request)
-                        .then((networkResponse) => {
-                            if (networkResponse && networkResponse.status === 200) {
-                                caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
-                            }
-                        })
-                        .catch(() => {});
-                    return cachedResponse;
-                }
-
-                return fetch(request).then((networkResponse) => {
+            fetch(request)
+                .then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
                         const responseClone = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => {
@@ -105,8 +93,9 @@ self.addEventListener('fetch', (event) => {
                         });
                     }
                     return networkResponse;
-                });
-            })
+                })
+                .catch(() => caches.match(request))
         );
+        return;
     }
 });

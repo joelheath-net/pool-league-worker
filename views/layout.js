@@ -86,41 +86,7 @@ const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
             </script>
             
             <!-- Stylesheets -->
-            <link rel="stylesheet" href="/css/style.css?v=2" />
-            <style>
-                header .logo {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                header .logo .instagram-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 22px;
-                    height: 22px;
-                    color: inherit;
-                    text-decoration: none;
-                    line-height: 0;
-                    border-radius: 4px;
-                    transition: color 0.2s ease, transform 0.2s ease;
-                    flex-shrink: 0;
-                }
-                header .logo .instagram-btn:hover {
-                    color: #007bff !important;
-                    transform: scale(1.08);
-                    text-decoration: none;
-                }
-                header .logo .instagram-btn:focus-visible {
-                    outline: 2px solid #007bff;
-                    outline-offset: 2px;
-                }
-                header .logo .instagram-btn svg {
-                    display: block;
-                    width: 20px;
-                    height: 20px;
-                }
-            </style>
+            <link rel="stylesheet" href="/css/style.css" />
             ${style}
             ${<MobileStyles cutoff={cutoff}  />}
         </head>

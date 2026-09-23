@@ -34,9 +34,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.error('ServiceWorker registration failed:', err);
-        });
+        const isLocalhost = Boolean(
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '[::1]' ||
+            window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
+        );
+
+        if (isLocalhost) {
+            // Unregister any active service worker on localhost to prevent local caching traps
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (const registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        } else {
+            navigator.serviceWorker.register('/sw.js').catch((err) => {
+                console.error('ServiceWorker registration failed:', err);
+            });
+        }
     });
 }
 
