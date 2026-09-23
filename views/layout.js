@@ -41,7 +41,6 @@ const Header = ({ isAuthenticated, isAdmin }) => {
         <nav>
             <a href="/log-game">Record New Game</a>
             <a href="/game-list">View Games List</a>
-            <a href="/audit-log">View Audit Log</a>
             <a href="/seasons">Season Archive</a>
             ${isAdmin
                 ? html`<a href="/admin-panel">Admin Dashboard</a>`

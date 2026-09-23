@@ -5,7 +5,10 @@ export const GamesPage = ({ isAuthenticated }) => {
         <div class="container" data-is-authenticated={isAuthenticated}>
             <h1 class="centre-title" style="margin-bottom: 8px;">Game History</h1>
             <div class="subtitle-container">
-                <a href="/outstanding-games" class="secondary-link">Determine Outstanding Games</a>
+                <a href="/outstanding-games" class="secondary-link">Calculate Outstanding Games</a>
+                {isAuthenticated
+                    ? <a href="/audit-log" class="secondary-link">View Audit Log</a>
+                    : ''}
             </div>
 
             <div class="table-container">

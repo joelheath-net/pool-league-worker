@@ -9,10 +9,12 @@ export const MobileStyles = ({ cutoff }) => {
                     flex-direction: column;
                     width: 100%;
                     position: absolute;
-                    top: 52px; /* 2rem + 2 * 10 px of padding */
+                    top: 100%;
                     left: 0;
                     border-radius: none;
                     background-color: white;
+                    z-index: 1000;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
                 header nav.is-active {

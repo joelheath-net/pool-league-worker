@@ -171,7 +171,6 @@ footer p {
 a {
     color: #007bff;
     text-decoration: none;
-    z-index: 10;
 }
 
 a:hover {
@@ -179,6 +178,8 @@ a:hover {
 }
 
 header {
+    position: relative;
+    z-index: 100;
     background-color: #ffffff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     padding: 10px 20px;
@@ -655,7 +656,12 @@ header nav a:hover, header nav a.active {
 }
 
 .subtitle-container {
-    text-align: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
     margin-bottom: 24px;
 }
 
@@ -756,15 +762,46 @@ header nav a:hover, header nav a.active {
 }
 
 .secondary-link {
-    color: #6c757d;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    font-size: 0.85rem;
     font-weight: 500;
-    text-decoration: none;
-    transition: color 0.2s;
+    color: #495057;
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    text-decoration: none !important;
+    transition: all 0.15s ease-in-out;
+    white-space: nowrap;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.subtitle-container .secondary-link {
+    width: 200px;
+    max-width: 100%;
 }
 
 .secondary-link:hover {
     color: #007bff;
-    text-decoration: underline;
+    background-color: #f8f9fa;
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.12);
+    text-decoration: none !important;
+}
+
+.secondary-link:active {
+    background-color: #e9ecef;
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.secondary-link:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
 }
 
 @media (max-width: 600px) {

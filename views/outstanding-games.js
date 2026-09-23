@@ -19,7 +19,7 @@ export const OutstandingGamesPage = ({ rounds = 2, isAuthenticated = false }) =>
                                 class="fixtures-rounds-input"
                                 required
                             />
-                            <button type="submit" class="button-primary">Determine Outstanding Games</button>
+                            <button type="submit" class="button-primary">Calculate Outstanding Games</button>
                         </div>
                     </form>
                 </div>
