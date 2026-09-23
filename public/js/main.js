@@ -37,6 +37,15 @@ eta.configure({
     tags: ["{{", "}}"]
 });
 
+function getWinLossRatio(player) {
+    const wins = Number(player.wins) || 0;
+    const losses = Number(player.losses) || 0;
+    if (losses === 0) {
+        return wins > 0 ? Infinity : 0;
+    }
+    return wins / losses;
+}
+
 function sortLeaderboardData(data, field, direction) {
     const isAsc = direction === 'asc';
     const mult = isAsc ? 1 : -1;
@@ -53,16 +62,25 @@ function sortLeaderboardData(data, field, direction) {
         }
 
         if (field === 'winLossRatio') {
-            const aRatio = a.ratioNumeric !== undefined ? a.ratioNumeric : (a.losses > 0 ? a.wins / a.losses : (a.wins > 0 ? Infinity : 0));
-            const bRatio = b.ratioNumeric !== undefined ? b.ratioNumeric : (b.losses > 0 ? b.wins / b.losses : (b.wins > 0 ? Infinity : 0));
+            const aRatio = getWinLossRatio(a);
+            const bRatio = getWinLossRatio(b);
 
             if (aRatio !== bRatio) {
+                if (aRatio === Infinity) return isAsc ? 1 : -1;
+                if (bRatio === Infinity) return isAsc ? -1 : 1;
                 return (aRatio - bRatio) * mult;
             }
+
             if (a.wins !== b.wins) {
                 return (a.wins - b.wins) * mult;
             }
-            return (a.points - b.points) * mult;
+            if (a.points !== b.points) {
+                return (a.points - b.points) * mult;
+            }
+            if (a.ballsRemaining !== b.ballsRemaining) {
+                return a.ballsRemaining - b.ballsRemaining;
+            }
+            return a.foulsOnBlack - b.foulsOnBlack;
         }
 
         if (field === 'foulsOnBlack') {
