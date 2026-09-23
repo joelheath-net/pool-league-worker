@@ -69,6 +69,8 @@ describe('SEO and Discovery Tests', () => {
         expect(html).toContain('"@type": "SportsOrganization"');
         expect(html).toContain('"name": "St Paul\'s League"');
         expect(html).toContain('"sport": "8-Ball Pool"');
+        expect(html).toContain('"sameAs"');
+        expect(html).toContain('https://www.instagram.com/stpaulsleague/');
         expect(html).toContain('"@type": "WebSite"');
 
         // Keywords tag removed
@@ -85,5 +87,17 @@ describe('SEO and Discovery Tests', () => {
         expect(html).toContain('Page Not Found');
         expect(html).toContain('<meta name="robots" content="noindex, nofollow" />');
         expect(html).toContain('Return to Standings');
+    });
+
+    it('renders the monochrome Instagram logo button in the header', async () => {
+        const res = await app.request('/');
+        expect(res.status).toBe(200);
+        const html = await res.text();
+        expect(html).toContain('href="https://www.instagram.com/stpaulsleague/"');
+        expect(html).toContain('target="_blank"');
+        expect(html).toContain('rel="noopener noreferrer"');
+        expect(html).toContain('class="instagram-btn"');
+        expect(html).toContain('<svg');
+        expect(html).toContain('fill="currentColor"');
     });
 });

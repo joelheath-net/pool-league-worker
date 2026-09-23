@@ -1,4 +1,4 @@
-const CACHE_NAME = 'st-pauls-league-v1';
+const CACHE_NAME = 'st-pauls-league-v2';
 const PRECACHE_ASSETS = [
     '/',
     '/site.webmanifest',
