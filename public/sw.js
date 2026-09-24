@@ -1,4 +1,4 @@
-const CACHE_NAME = 'st-pauls-league-v1'; // only increment on major structural / emergency reset, as network-first approach will auto-update app anyway.
+const CACHE_NAME = 'st-pauls-league-v1'; // Do not increment; using a Network-First strategy
 const PRECACHE_ASSETS = [
     '/',
     '/site.webmanifest',
@@ -43,6 +43,11 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(request.url);
 
+    // Bypass caching on localhost during development
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        return;
+    }
+
     // Bypass caching for API, authentication, and admin endpoints
     if (
         url.pathname.startsWith('/api') ||
@@ -51,6 +56,7 @@ self.addEventListener('fetch', (event) => {
     ) {
         return;
     }
+
 
     // Navigation requests (HTML pages): Network-first with cache fallback
     if (request.mode === 'navigate') {
@@ -99,3 +105,50 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 });
+
+// --- Web Push Notifications ---
+
+self.addEventListener('push', (event) => {
+    let payload = {};
+    try {
+        payload = event.data ? event.data.json() : {};
+    } catch (e) {
+        payload = {
+            title: "St Paul's League",
+            body: event.data ? event.data.text() : 'Leaderboard ranking update!'
+        };
+    }
+
+    const title = payload.title || "St Paul's League";
+    const options = {
+        body: payload.body || 'Your leaderboard ranking has changed!',
+        icon: '/images/android-chrome-192x192.png',
+        badge: '/images/favicon-32x32.png',
+        tag: 'leaderboard-rank-change',
+        renotify: true,
+        data: {
+            url: payload.url || '/'
+        }
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const targetUrl = event.notification.data?.url || '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});
+

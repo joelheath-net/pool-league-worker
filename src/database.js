@@ -519,3 +519,35 @@ export const archiveSeason = async (db, seasonName) => {
 
     return { newSeasonId: seasonId };
 };
+
+// --- Push Notification Subscription Functions ---
+
+export const savePushSubscription = async (db, userId, { endpoint, p256dh, auth }) => {
+    return await db.prepare(`
+        INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(endpoint) DO UPDATE SET
+            user_id = excluded.user_id,
+            p256dh = excluded.p256dh,
+            auth = excluded.auth
+    `).bind(userId, endpoint, p256dh, auth).run();
+};
+
+export const deletePushSubscription = async (db, endpoint) => {
+    return await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(endpoint).run();
+};
+
+export const deletePushSubscriptionsForUser = async (db, userId) => {
+    return await db.prepare('DELETE FROM push_subscriptions WHERE user_id = ?').bind(userId).run();
+};
+
+export const getPushSubscriptionsForUser = async (db, userId) => {
+    const { results } = await db.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?').bind(userId).all();
+    return results || [];
+};
+
+export const hasPushSubscription = async (db, userId) => {
+    const row = await db.prepare('SELECT 1 FROM push_subscriptions WHERE user_id = ? LIMIT 1').bind(userId).first();
+    return Boolean(row);
+};
+

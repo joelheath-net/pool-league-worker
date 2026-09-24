@@ -2,6 +2,12 @@ import { Hono } from 'hono';
 import { protectAPI } from './middleware.js';
 import * as db from './database.js';
 import { calculateOutstandingGames } from './scheduler.js';
+import {
+    getLeaderboardRanks,
+    diffRankings,
+    notifyRankChanges,
+    sendTestNotification
+} from './push-service.js';
 
 const api = new Hono();
 
@@ -99,11 +105,62 @@ api.get('/seasons', async (c) => {
     return c.json(seasons);
 });
 
+api.get('/push-config', (c) => {
+    return c.json({
+        publicKey: c.env.VAPID_PUBLIC_KEY || ''
+    });
+});
+
+api.post('/push-unsubscribe', async (c) => {
+    try {
+        const body = await c.req.json().catch(() => ({}));
+        if (body?.endpoint) {
+            await db.deletePushSubscription(c.env.DB, body.endpoint);
+        }
+        return c.json({ message: 'Unsubscribed successfully' });
+    } catch (e) {
+        return c.json({ message: 'Failed to unsubscribe' }, 500);
+    }
+});
+
 // --- AUTHENTICATED ROUTES ---
 
 api.get('/users-sensitive', protectAPI, async (c) => {
     const users = await db.getSensitiveUsers(c.env.DB);
     return c.json(users);
+});
+
+api.get('/push-status', protectAPI, async (c) => {
+    const userPayload = await c.get('user');
+    const subscribed = await db.hasPushSubscription(c.env.DB, userPayload.sub);
+    return c.json({ subscribed });
+});
+
+api.post('/push-subscribe', protectAPI, async (c) => {
+    const userPayload = await c.get('user');
+    const body = await c.req.json();
+
+    if (!body || !body.endpoint || !body.keys || !body.keys.p256dh || !body.keys.auth) {
+        return c.json({ message: 'Invalid subscription data format' }, 400);
+    }
+
+    await db.savePushSubscription(c.env.DB, userPayload.sub, {
+        endpoint: body.endpoint,
+        p256dh: body.keys.p256dh,
+        auth: body.keys.auth
+    });
+
+    return c.json({ message: 'Subscribed successfully' });
+});
+
+api.post('/push-test', protectAPI, async (c) => {
+    const userPayload = await c.get('user');
+    try {
+        const result = await sendTestNotification(c.env, userPayload.sub);
+        return c.json({ message: 'Test notification sent successfully', result });
+    } catch (err) {
+        return c.json({ message: err.message || 'Failed to send test notification' }, 400);
+    }
 });
 
 api.get('/profile', protectAPI, async (c) => {
@@ -124,6 +181,7 @@ api.patch('/profile', protectAPI, async (c) => {
     await db.updateProfile(c.env.DB, userPayload.sub, profileData);
     return c.json({ message: 'Profile updated successfully' });
 });
+
 
 api.post('/log-game', protectAPI, async (c) => {
     const userPayload = await c.get('user');
@@ -156,9 +214,23 @@ api.post('/log-game', protectAPI, async (c) => {
     // Add author from the authenticated user context
     gameData.authorId = userPayload.sub;
 
+    const prevRanks = await getLeaderboardRanks(c.env.DB);
     await db.createGameRevision(c.env.DB, gameData);
+    const newRanks = await getLeaderboardRanks(c.env.DB);
+    const rankChanges = diffRankings(prevRanks, newRanks);
+
+    if (rankChanges.length > 0) {
+        const notifyTask = notifyRankChanges(c.env, rankChanges);
+        if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+            c.executionCtx.waitUntil(notifyTask);
+        } else {
+            notifyTask.catch((err) => console.error('[Push] Notify error:', err));
+        }
+    }
+
     return c.json({ message: 'Game logged successfully' }, 201);
 });
+
 
 api.get('/audit-log', protectAPI, async (c) => {
     const revisions = await db.getAuditLog(c.env.DB);
@@ -202,9 +274,23 @@ api.patch('/game', protectAPI, async (c) => {
     gameData.authorId = userPayload.sub;
 
     try {
+        const prevRanks = await getLeaderboardRanks(c.env.DB);
         await db.updateGame(c.env.DB, gameData);
+        const newRanks = await getLeaderboardRanks(c.env.DB);
+        const rankChanges = diffRankings(prevRanks, newRanks);
+
+        if (rankChanges.length > 0) {
+            const notifyTask = notifyRankChanges(c.env, rankChanges);
+            if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+                c.executionCtx.waitUntil(notifyTask);
+            } else {
+                notifyTask.catch((err) => console.error('[Push] Notify error:', err));
+            }
+        }
+
         return c.json({ message: 'Game updated successfully by creating a new revision.' }, 200);
     } catch (error) {
+
         if (error.message.includes('does not exist')) {
             return c.json({ message: error.message }, 404);
         }

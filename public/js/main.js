@@ -170,27 +170,40 @@ if (document.readyState === 'loading') {
 }
 
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        const isLocalhost = Boolean(
-            window.location.hostname === 'localhost' ||
-            window.location.hostname === '[::1]' ||
-            window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
-        );
-
-        if (isLocalhost) {
-            // Unregister any active service worker on localhost to prevent local caching traps
-            navigator.serviceWorker.getRegistrations().then((registrations) => {
-                for (const registration of registrations) {
-                    registration.unregister();
-                }
-            });
-        } else {
-            navigator.serviceWorker.register('/sw.js').catch((err) => {
-                console.error('ServiceWorker registration failed:', err);
-            });
-        }
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+        reg.update();
+    }).catch((err) => {
+        console.error('ServiceWorker registration failed:', err);
     });
 }
+
+
+// Cleanly deregister push subscription on device prior to logging out
+document.addEventListener('click', async (event) => {
+    const logoutLink = event.target.closest('a[href="/auth/logout"]');
+    if (!logoutLink) return;
+
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        event.preventDefault();
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) {
+                await fetch('/api/push-unsubscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpoint: sub.endpoint })
+                }).catch(() => {});
+                await sub.unsubscribe().catch(() => {});
+            }
+        } catch (err) {
+            console.warn('[Push] Unsubscribe on logout failed:', err);
+        } finally {
+            window.location.href = logoutLink.href;
+        }
+    }
+});
+
 
 const eta = window.Eta;
 eta.configure({

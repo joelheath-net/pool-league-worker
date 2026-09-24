@@ -21,6 +21,25 @@ export const CustomizePage = () => {
 
                 <button type="submit">Save Changes</button>
             </form>
+
+            <div id="pwa-notifications-card" class="pwa-notifications-card">
+                <div class="notifications-card-header">
+                    <h2>Push Notifications</h2>
+                    <span id="push-status-badge" class="push-status-badge badge-checking">Checking...</span>
+                </div>
+                <p class="notifications-card-desc">
+                    Receive instant alerts on your device whenever a your leaderboard ranking changes.
+                </p>
+                <div class="notifications-card-action">
+                    <button type="button" id="push-toggle-btn" class="push-btn push-btn-primary" disabled>
+                        Enable Notifications
+                    </button>
+                    <button type="button" id="push-test-btn" class="push-btn push-btn-secondary" style="display: none;">
+                        Send Test Alert
+                    </button>
+                </div>
+                <div id="push-feedback" class="push-feedback" style="display: none;"></div>
+            </div>
         </div>
     );
 };

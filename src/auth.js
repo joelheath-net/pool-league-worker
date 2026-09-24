@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { sign, decode } from 'hono/jwt';
-import { findOrCreateUser, isEmailWhitelisted } from './database.js';
+import { findOrCreateUser, isEmailWhitelisted, deletePushSubscriptionsForUser } from './database.js';
 import { performTokenRefresh } from './token-service.js';
 import { accessTokenExpiresIn, refreshTokenExpiresIn } from './token-service.js';
 
@@ -122,9 +122,21 @@ auth.post('/refresh', async (c) => {
     }
 });
 
-auth.get('/logout', (c) => {
+auth.get('/logout', async (c) => {
+    const authToken = getCookie(c, 'auth_token');
+    if (authToken) {
+        try {
+            const payload = decode(authToken).payload;
+            if (payload?.sub) {
+                await deletePushSubscriptionsForUser(c.env.DB, payload.sub);
+            }
+        } catch (e) {
+            console.warn('[AUTH] Error during push cleanup on logout:', e);
+        }
+    }
     deleteCookie(c, 'auth_token', { path: '/' });
     return c.redirect('/');
 });
+
 
 export default auth;

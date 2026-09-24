@@ -263,7 +263,15 @@ header nav a:hover, header nav a.active {
 
 /* Window Controls Overlay (Desktop installed PWA) */
 @media (display-mode: window-controls-overlay) {
+    html {
+        scroll-padding-top: env(titlebar-area-height, 33px);
+    }
+
     header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        width: 100%;
         height: env(titlebar-area-height, 33px);
         min-height: env(titlebar-area-height, 33px);
         max-height: env(titlebar-area-height, 33px);
@@ -1100,3 +1108,130 @@ header nav a:hover, header nav a.active {
         flex-direction: column;
     }
 }
+
+/* PWA Push Notification Settings Card */
+.pwa-notifications-card {
+    background-color: #fff;
+    padding: 22px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 500px;
+    margin: 25px auto 0 auto;
+    border: 1px solid #e2e8f0;
+}
+
+.notifications-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.notifications-card-header h2 {
+    font-size: 1.25rem;
+    margin: 0;
+    color: #333;
+}
+
+.notifications-card-desc {
+    font-size: 0.92rem;
+    color: #666;
+    margin: 0 0 18px 0;
+    line-height: 1.4;
+}
+
+.notifications-card-action {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.push-status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-checking {
+    background-color: #e2e8f0;
+    color: #64748b;
+}
+
+.badge-active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-off {
+    background-color: #f1f5f9;
+    color: #64748b;
+}
+
+.badge-blocked {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.push-btn {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.push-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.push-btn-primary {
+    background-color: #007bff;
+    color: #ffffff;
+}
+
+.push-btn-primary:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.push-btn-danger {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+
+.push-btn-danger:hover:not(:disabled) {
+    background-color: #bd2130;
+}
+
+.push-btn-secondary {
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+.push-btn-secondary:hover:not(:disabled) {
+    background-color: #545b62;
+}
+
+.push-feedback {
+    margin-top: 14px;
+    font-size: 0.88rem;
+    padding: 10px 12px;
+    border-radius: 6px;
+}
+
+.push-feedback-success {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.push-feedback-error {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}

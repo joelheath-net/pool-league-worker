@@ -66,6 +66,19 @@ CREATE TABLE IF NOT EXISTS whitelisted_emails (
 );
 
 
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     TEXT NOT NULL,
+    endpoint    TEXT NOT NULL UNIQUE,
+    p256dh      TEXT NOT NULL,
+    auth        TEXT NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+
+
 -- CREATE TRIGGER IF NOT EXISTS prevent_game_revision_updates
 -- BEFORE UPDATE ON game_revisions
 -- BEGIN

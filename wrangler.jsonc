@@ -25,7 +25,7 @@
 			"database_name": "pool-league-db",
 			"database_id": "54acd17f-9360-4d8a-bc2c-5ecf9beacb70"
 		}
-	]
+	],
 
 	/**
 	 * Smart Placement
@@ -44,7 +44,10 @@
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
-	// "vars": { "MY_VARIABLE": "production_value" },
+	"vars": {
+		"VAPID_PUBLIC_KEY": "BGt5UNW5g6DGZgaolrEpPKmtJtSTMJVEgMuZVQCwPIPbc8r0n3lWAoQ7USgxgLBpO07L2TW6SnqtvZMcORTGuag",
+		"VAPID_SUBJECT": "mailto:admin@stpaulsleague.joelheath.net"
+	},
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
