@@ -3,7 +3,7 @@ export const ArchivedLeaderboardPage = ({ seasonId }) => {
         <div class="container" data-season-id={seasonId}>
             <h1 class="centre-title leaderboard-title" id="season-name">Loading...</h1>
 
-            <div class="leaderboard-wrapper">
+            <div class="leaderboard-wrapper" data-nosnippet>
                 <div class="leaderboard-controls">
                     <div class="sort-panel" id="sort-panel">
                         <div class="sort-control">

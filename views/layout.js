@@ -96,22 +96,26 @@ const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
 const Header = ({ isAuthenticated, isAdmin }) => {
     const authenticatedNav = html`
         <nav>
-            <a href="/log-game">Record New Game</a>
-            <a href="/game-list">View Games List</a>
-            <a href="/seasons">Season Archive</a>
-            ${isAdmin
-                ? html`<a href="/admin-panel">Admin Dashboard</a>`
-                : ''}
-            <a href="/profile">Customise Profile</a>
-            <a href="/auth/logout">Logout</a>
+            <div data-nosnippet style="display: contents;">
+                <a href="/log-game">Record New Game</a>
+                <a href="/game-list">View Games List</a>
+                <a href="/seasons">Season Archive</a>
+                ${isAdmin
+                    ? html`<a href="/admin-panel">Admin Dashboard</a>`
+                    : ''}
+                <a href="/profile">Customise Profile</a>
+                <a href="/auth/logout">Logout</a>
+            </div>
         </nav>
     `;
 
     const unauthenticatedNav = html`
         <nav>
-            <a href="/game-list">View Games List</a>
-            <a href="/seasons">Season Archive</a>
-            <a href="/auth/google/login">Sign In</a>
+            <div data-nosnippet style="display: contents;">
+                <a href="/game-list">View Games List</a>
+                <a href="/seasons">Season Archive</a>
+                <a href="/auth/google/login">Sign In</a>
+            </div>
         </nav>
     `;
 
@@ -171,9 +175,11 @@ export const Layout = (props) => {
             </main>
 
             <footer>
-                <p>&copy; ${new Date().getFullYear()} St Paul's League. All rights reserved.</p>
-                <p>Sponsored by&nbsp;<a target="_blank" rel="noopener noreferrer" href="https://www.joelheath.net">joelheath.net</a>.</p>
-                <p><a href="/about">About</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<a href="/privacy-policy">Privacy Policy</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<a href="/terms-of-service">Terms and Conditions</a></p>
+                <div data-nosnippet style="display: contents;">
+                    <p>&copy; ${new Date().getFullYear()} St Paul's League. All rights reserved.</p>
+                    <p>Sponsored by&nbsp;<a target="_blank" rel="noopener noreferrer" href="https://www.joelheath.net">joelheath.net</a>.</p>
+                    <p><a href="/about">About</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<a href="/privacy-policy">Privacy Policy</a>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<a href="/terms-of-service">Terms and Conditions</a></p>
+                </div>
             </footer>
 
             

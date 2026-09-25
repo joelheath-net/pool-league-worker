@@ -11,7 +11,7 @@ export const GamesPage = ({ isAuthenticated }) => {
                     : ''}
             </div>
 
-            <div class="table-container">
+            <div class="table-container" data-nosnippet>
                 <table>
                     <thead>
                         <tr>

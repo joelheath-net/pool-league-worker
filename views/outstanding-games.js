@@ -26,7 +26,7 @@ export const OutstandingGamesPage = ({ rounds = 2, isAuthenticated = false }) =>
                 <div id="fixtures-summary" class="fixtures-summary-banner" style="display: none;"></div>
             </div>
 
-            <div class="table-container">
+            <div class="table-container" data-nosnippet>
                 <table>
                     <thead>
                         <tr>
