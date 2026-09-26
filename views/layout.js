@@ -1,16 +1,28 @@
-import { html } from 'hono/html'
+import { html, raw } from 'hono/html'
 import { MobileStyles } from './mobile-style';
+
+const escapeAttr = (str) => {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+};
 
 const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
     const defaultDescription = "Track upcoming fixtures, past results, and league standings for St Paul's Pool League.";
     const metaDescription = description || defaultDescription;
     const pageCanonicalUrl = canonicalUrl || "https://stpaulsleague.joelheath.net";
 
+    const safeTitle = raw(escapeAttr(title));
+    const safeDescription = raw(escapeAttr(metaDescription));
+
     return html`
         <head>
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>${title}</title>
+            <title>${safeTitle}</title>
             <link rel="canonical" href="${pageCanonicalUrl}" />
 
             <!-- Favicon and Apple Touch Icons -->
@@ -20,8 +32,8 @@ const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
             <link rel="manifest" href="/site.webmanifest" />
 
             <!-- Open Graph / Discord -->
-            <meta property="og:title" content="${title}" />
-            <meta property="og:description" content="${metaDescription}" />
+            <meta property="og:title" content="${safeTitle}" />
+            <meta property="og:description" content="${safeDescription}" />
             <meta property="og:image" content="https://stpaulsleague.joelheath.net/images/logo-hd.jpg" />
             <meta property="og:image:width" content="640" />
             <meta property="og:image:height" content="640" />
@@ -34,8 +46,8 @@ const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
 
             <!-- Twitter / X -->
             <meta name="twitter:card" content="summary" />
-            <meta name="twitter:title" content="${title}" />
-            <meta name="twitter:description" content="${metaDescription}" />
+            <meta name="twitter:title" content="${safeTitle}" />
+            <meta name="twitter:description" content="${safeDescription}" />
             <meta name="twitter:image" content="https://stpaulsleague.joelheath.net/images/logo-hd.jpg" />
             <meta name="twitter:image:alt" content="St Paul's Pool League Logo" />
 
@@ -43,7 +55,7 @@ const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
             <meta name="application-name" content="St Paul's League" lang="en" />
             <meta name="apple-mobile-web-app-title" content="St Paul's" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-            <meta name="description" content="${metaDescription}" />
+            <meta name="description" content="${safeDescription}" />
             ${robots ? html`<meta name="robots" content="${robots}" />` : ''}
             <meta name="author" content="Joel Heath" />
             <meta name="msapplication-TileColor" content="#fd7c28" />
