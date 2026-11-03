@@ -1,21 +1,98 @@
 import { setCookie } from 'hono/cookie';
-import { sign } from 'hono/jwt';
-import { getUserForRefresh, updateUserTokens } from './database.js';
+import { sign, verify, decode } from 'hono/jwt';
+import { getUserForRefresh, updateUserTokens, isEmailWhitelisted } from './database.js';
 
+export const JWT_ALGORITHM = 'HS256';
 export const accessTokenExpiresIn = 60 * 15; // 15 minutes
 export const refreshTokenExpiresIn = 60 * 60 * 24 * 90; // 90 days
+
+const getJwtSecret = (env) => {
+    const secret = env?.JWT_SECRET;
+    if (!secret || typeof secret !== 'string') {
+        throw new Error('JWT_SECRET environment secret is missing or invalid.');
+    }
+    return secret;
+};
+
+export const signAuthToken = async (user, env) => {
+    const secret = getJwtSecret(env);
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        iat: now,
+        exp: now + accessTokenExpiresIn,
+    };
+    const jwt = await sign(payload, secret, JWT_ALGORITHM);
+    return { jwt, payload };
+};
+
+/**
+ * Cryptographically verifies a session JWT against `env.JWT_SECRET` BEFORE checking expiry.
+ * Note: Hono's `verify()` checks `exp` before checking the cryptographic signature, so calling
+ * `verify()` with `exp: true` throws `JwtTokenExpired` even on forged unsigned/fake-signed tokens.
+ * Passing `exp: false` forces signature verification first; we then evaluate expiration ourselves.
+ */
+export const verifySessionToken = async (token, env) => {
+    const secret = getJwtSecret(env);
+    if (!token || typeof token !== 'string') {
+        throw new Error('Invalid token');
+    }
+
+    const { header } = decode(token);
+    if (!header || header.alg !== JWT_ALGORITHM) {
+        throw new Error('Invalid JWT algorithm');
+    }
+
+    const payload = await verify(token, secret, {
+        alg: JWT_ALGORITHM,
+        exp: false,
+        iat: false,
+        nbf: false,
+    });
+
+    if (!payload || typeof payload.sub !== 'string' || !payload.sub || typeof payload.exp !== 'number' || !Number.isFinite(payload.exp)) {
+        throw new Error('Invalid JWT payload claims');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const isExpired = payload.exp <= now;
+
+    if (isExpired) {
+        const issuedAt = typeof payload.iat === 'number' && Number.isFinite(payload.iat)
+            ? payload.iat
+            : payload.exp - accessTokenExpiresIn;
+        if (now - issuedAt > refreshTokenExpiresIn) {
+            throw new Error('Token refresh window expired');
+        }
+    }
+
+    return { payload, isExpired };
+};
 
 export const performTokenRefresh = async (c, userId) => {
     if (!userId) {
         console.error('[TOKEN-SERVICE] Refresh failed: No userId provided.');
-        return 'FAILED';
+        return { message: 'INVALID_USER', jwt: null, payload: null };
     }
 
     const user = await getUserForRefresh(c.env.DB, userId);
 
-    if (!user || !user.googleRefreshToken) {
+    if (!user) {
+        console.error(`[TOKEN-SERVICE] Refresh failed: User ${userId} not found in DB.`);
+        return { message: 'USER_NOT_FOUND', jwt: null, payload: null };
+    }
+
+    const whitelisted = await isEmailWhitelisted(c.env.DB, user.email);
+    if (!whitelisted) {
+        console.warn(`[TOKEN-SERVICE] Refresh rejected: ${user.email} is no longer whitelisted.`);
+        return { message: 'NOT_WHITELISTED', jwt: null, payload: null };
+    }
+
+    if (!user.googleRefreshToken) {
         console.error(`[TOKEN-SERVICE] Refresh failed: No refresh token found in DB for user ${userId}.`);
-        return { message: 'NO_REFRESH_TOKEN', jwt: null };
+        return { message: 'NO_REFRESH_TOKEN', jwt: null, payload: null };
     }
 
     try {
@@ -37,20 +114,14 @@ export const performTokenRefresh = async (c, userId) => {
         if (!tokenResponse.ok) {
             console.error(`[TOKEN-SERVICE] Refresh failed: Google API returned an error for user ${userId}.`, tokenData);
             if (tokenData?.error === 'invalid_grant') {
-                return { message: 'INVALID_GRANT', jwt: null };
+                return { message: 'INVALID_GRANT', jwt: null, payload: null };
             }
-            return { message: 'GOOGLE_API_ERROR', jwt: null };
+            return { message: 'GOOGLE_API_ERROR', jwt: null, payload: null };
         }
 
         await updateUserTokens(c.env.DB, userId, tokenData.access_token, tokenData.expires_in);
 
-        const newPayload = {
-            sub: userId,
-            email: user.email,
-            role: user.role,
-            exp: Math.floor(Date.now() / 1000) + accessTokenExpiresIn,
-        };
-        const newJwt = await sign(newPayload, c.env.JWT_SECRET);
+        const { jwt: newJwt, payload: newPayload } = await signAuthToken(user, c.env);
 
         setCookie(c, 'auth_token', newJwt, {
             path: '/',
@@ -62,10 +133,10 @@ export const performTokenRefresh = async (c, userId) => {
 
         console.log(`[TOKEN-SERVICE] Refresh successful for user ${userId}. New JWT issued.`);
 
-        return { message: 'REFRESH_SUCCESS', jwt: newJwt };
+        return { message: 'REFRESH_SUCCESS', jwt: newJwt, payload: newPayload };
 
     } catch (error) {
         console.error(`[TOKEN-SERVICE] Refresh failed: An unexpected error occurred for user ${userId}.`, error);
-        return { message: 'UNEXPECTED_ERROR', jwt: null };
+        return { message: 'UNEXPECTED_ERROR', jwt: null, payload: null };
     }
 };

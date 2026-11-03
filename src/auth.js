@@ -1,9 +1,16 @@
 import { Hono } from 'hono';
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
-import { sign, decode } from 'hono/jwt';
+import { verifyWithJwks } from 'hono/jwt';
 import { findOrCreateUser, isEmailWhitelisted, deletePushSubscriptionsForUser } from './database.js';
-import { performTokenRefresh } from './token-service.js';
-import { accessTokenExpiresIn, refreshTokenExpiresIn } from './token-service.js';
+import {
+    performTokenRefresh,
+    refreshTokenExpiresIn,
+    signAuthToken,
+    verifySessionToken
+} from './token-service.js';
+
+const GOOGLE_JWKS_URI = 'https://www.googleapis.com/oauth2/v3/certs';
+const GOOGLE_ISSUER_PATTERN = /^https:\/\/accounts\.google\.com$|^accounts\.google\.com$/;
 
 const auth = new Hono();
 
@@ -14,11 +21,21 @@ auth.get('/google/login', (c) => {
     const currentUrl = new URL(c.req.url);
     const redirectUri = `${currentUrl.origin}/auth/google/callback`;
 
+    const state = crypto.randomUUID();
+    setCookie(c, 'oauth_state', state, {
+        path: '/',
+        secure: currentUrl.protocol === 'https:',
+        httpOnly: true,
+        maxAge: 60 * 10, // 10 minutes
+        sameSite: 'Lax'
+    });
+
     googleAuthUrl.searchParams.set('client_id', c.env.GOOGLE_CLIENT_ID);
     googleAuthUrl.searchParams.set('redirect_uri', redirectUri);
     googleAuthUrl.searchParams.set('response_type', 'code');
     googleAuthUrl.searchParams.set('scope', 'openid profile email');
     googleAuthUrl.searchParams.set('access_type', 'offline');
+    googleAuthUrl.searchParams.set('state', state);
 
     const reconsentNeeded = getCookie(c, 'reconsent_needed') || c.req.query('prompt') === 'consent';
     if (reconsentNeeded) {
@@ -32,8 +49,17 @@ auth.get('/google/login', (c) => {
 // Callback route that Google redirects to
 auth.get('/google/callback', async (c) => {
     const code = c.req.query('code');
+    const state = c.req.query('state');
+    const savedState = getCookie(c, 'oauth_state');
+    deleteCookie(c, 'oauth_state', { path: '/' });
+
     if (!code) {
         return c.text('Authorization code is missing.', 400);
+    }
+
+    if (!state || !savedState || state !== savedState) {
+        console.warn('[AUTH] OAuth callback rejected due to missing or mismatched state.');
+        return c.text('Invalid OAuth state.', 400);
     }
 
     const currentUrl = new URL(c.req.url);
@@ -53,12 +79,23 @@ auth.get('/google/callback', async (c) => {
         });
 
         const tokens = await tokenResponse.json();
-        if (!tokens.access_token) {
-            console.error('Failed to fetch access token:', tokens);
+        if (!tokenResponse.ok || !tokens.access_token || !tokens.id_token) {
+            console.error('Failed to fetch access/ID token:', tokens);
             return c.text('Failed to obtain access token.', 500);
         }
 
-        const idTokenPayload = decode(tokens.id_token).payload;
+        const idTokenPayload = await verifyWithJwks(tokens.id_token, {
+            jwks_uri: GOOGLE_JWKS_URI,
+            verification: {
+                iss: GOOGLE_ISSUER_PATTERN,
+                iat: false
+            }
+        });
+
+        if (idTokenPayload.aud !== c.env.GOOGLE_CLIENT_ID || !idTokenPayload.email_verified) {
+            console.error('[AUTH] Google ID token audience or email verification check failed.');
+            return c.text('Invalid ID token.', 401);
+        }
 
         const isWhitelisted = idTokenPayload.email && await isEmailWhitelisted(c.env.DB, idTokenPayload.email);
         if (!isWhitelisted) {
@@ -75,13 +112,7 @@ auth.get('/google/callback', async (c) => {
             return c.redirect('/auth/google/login?prompt=consent');
         }
 
-        const payload = {
-            sub: user.id,
-            email: user.email,
-            role: user.role,
-            exp: Math.floor(Date.now() / 1000) + accessTokenExpiresIn
-        };
-        const jwt = await sign(payload, c.env.JWT_SECRET);
+        const { jwt } = await signAuthToken(user, c.env);
 
         setCookie(c, 'auth_token', jwt, {
             path: '/',
@@ -106,13 +137,13 @@ auth.post('/refresh', async (c) => {
 
     let payload;
     try {
-        payload = decode(authToken).payload;
+        ({ payload } = await verifySessionToken(authToken, c.env));
     } catch (e) {
+        deleteCookie(c, 'auth_token', { path: '/' });
         return c.json({ message: 'Invalid token' }, 401);
     }
 
-    const userId = payload?.sub;
-    const refreshed = await performTokenRefresh(c, userId);
+    const refreshed = await performTokenRefresh(c, payload.sub);
 
     if (refreshed?.jwt) {
         return c.json({ message: 'Token refreshed' });
@@ -126,12 +157,12 @@ auth.get('/logout', async (c) => {
     const authToken = getCookie(c, 'auth_token');
     if (authToken) {
         try {
-            const payload = decode(authToken).payload;
+            const { payload } = await verifySessionToken(authToken, c.env);
             if (payload?.sub) {
                 await deletePushSubscriptionsForUser(c.env.DB, payload.sub);
             }
         } catch (e) {
-            console.warn('[AUTH] Error during push cleanup on logout:', e);
+            console.warn('[AUTH] Ignoring invalid token during push cleanup on logout.');
         }
     }
     deleteCookie(c, 'auth_token', { path: '/' });

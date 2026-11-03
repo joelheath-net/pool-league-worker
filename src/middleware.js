@@ -1,6 +1,5 @@
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
-import { verify, decode } from 'hono/jwt';
-import { performTokenRefresh } from './token-service.js';
+import { performTokenRefresh, verifySessionToken } from './token-service.js';
 import { clearUserRefreshToken } from './database.js';
 
 /**
@@ -20,45 +19,40 @@ export const authContextMiddleware = async (c, next) => {
     }
 
     try {
-        const payload = await verify(token, c.env.JWT_SECRET);
-        c.set('user', payload);
-        c.set('isAuthenticated', true);
-        c.set('isAdmin', payload.role === 'admin');
-    } catch (error) {
-        // If token is expired, try to refresh it
-        if (error.name === 'JwtTokenExpired') {
-            console.log('[MIDDLEWARE] Token expired, attempting server-side refresh...');
-            const { payload } = decode(token);
-            const userId = payload?.sub;
-            if (userId) {
-                const { message: refreshStatus, jwt: newToken } = await performTokenRefresh(c, userId);
-                
-                if (newToken) {
-                    // If refresh worked, the new token is in the cookie. We need to verify it to set the context for the current request.
-                    const newPayload = await verify(newToken, c.env.JWT_SECRET);
-                    c.set('user', newPayload);
-                    c.set('isAuthenticated', true);
-                    c.set('isAdmin', newPayload.role === 'admin');
-                    console.log('[MIDDLEWARE] Token refreshed successfully.');
-                } else {
-                    deleteCookie(c, 'auth_token', { path: '/' });
+        // Always cryptographically verify the HMAC signature BEFORE trusting claims or attempting refresh
+        const { payload, isExpired } = await verifySessionToken(token, c.env);
 
-                    if (refreshStatus === 'INVALID_GRANT') {
-                        console.warn(`[MIDDLEWARE] Google refresh token invalid for user ${userId}. Clearing from DB.`);
-                        await clearUserRefreshToken(c.env.DB, userId);
-                        setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 60 * 24 * 7 }); // 7 days
-                    } else if (refreshStatus === 'NO_REFRESH_TOKEN') {
-                        setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 60 * 24 * 7 }); // 7 days
-                    }
-                }
+        if (!isExpired) {
+            c.set('user', payload);
+            c.set('isAuthenticated', true);
+            c.set('isAdmin', payload.role === 'admin');
+        } else {
+            // Token signature is authentic, and its 15-minute access window has expired — attempt server-side refresh
+            console.log('[MIDDLEWARE] Token expired, attempting server-side refresh...');
+            const userId = payload.sub;
+            const { message: refreshStatus, jwt: newToken, payload: newPayload } = await performTokenRefresh(c, userId);
+
+            if (newToken && newPayload) {
+                c.set('user', newPayload);
+                c.set('isAuthenticated', true);
+                c.set('isAdmin', newPayload.role === 'admin');
+                console.log('[MIDDLEWARE] Token refreshed successfully.');
             } else {
                 deleteCookie(c, 'auth_token', { path: '/' });
+
+                if (refreshStatus === 'INVALID_GRANT') {
+                    console.warn(`[MIDDLEWARE] Google refresh token invalid for user ${userId}. Clearing from DB.`);
+                    await clearUserRefreshToken(c.env.DB, userId);
+                    setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 60 * 24 * 7 }); // 7 days
+                } else if (refreshStatus === 'NO_REFRESH_TOKEN') {
+                    setCookie(c, 'reconsent_needed', 'true', { path: '/', maxAge: 60 * 60 * 24 * 7 }); // 7 days
+                }
             }
-        } else {
-            deleteCookie(c, 'auth_token', { path: '/' });
         }
+    } catch (error) {
+        deleteCookie(c, 'auth_token', { path: '/' });
     }
-    
+
     await next();
 };
 
