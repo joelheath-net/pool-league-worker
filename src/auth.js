@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
-import { verifyWithJwks } from 'hono/jwt';
+import { decode } from 'hono/jwt';
 import { findOrCreateUser, isEmailWhitelisted, deletePushSubscriptionsForUser } from './database.js';
 import {
     performTokenRefresh,
@@ -8,9 +8,6 @@ import {
     signAuthToken,
     verifySessionToken
 } from './token-service.js';
-
-const GOOGLE_JWKS_URI = 'https://www.googleapis.com/oauth2/v3/certs';
-const GOOGLE_ISSUER_PATTERN = /^https:\/\/accounts\.google\.com$|^accounts\.google\.com$/;
 
 const auth = new Hono();
 
@@ -84,16 +81,21 @@ auth.get('/google/callback', async (c) => {
             return c.text('Failed to obtain access token.', 500);
         }
 
-        const idTokenPayload = await verifyWithJwks(tokens.id_token, {
-            jwks_uri: GOOGLE_JWKS_URI,
-            verification: {
-                iss: GOOGLE_ISSUER_PATTERN,
-                iat: false
-            }
-        });
+        // `tokens.id_token` comes directly from Google's TLS-authenticated token endpoint above
+        // (authenticated with GOOGLE_CLIENT_SECRET), so per OIDC Core 3.1.3.7 TLS validates the
+        // origin without needing a separate JWKS subrequest. Verify expected OIDC claims directly:
+        const { payload: idTokenPayload } = decode(tokens.id_token);
 
-        if (idTokenPayload.aud !== c.env.GOOGLE_CLIENT_ID || !idTokenPayload.email_verified) {
-            console.error('[AUTH] Google ID token audience or email verification check failed.');
+        const validIssuer =
+            idTokenPayload?.iss === 'https://accounts.google.com' ||
+            idTokenPayload?.iss === 'accounts.google.com';
+        const validAudience = idTokenPayload?.aud === c.env.GOOGLE_CLIENT_ID?.trim();
+        const emailVerified =
+            idTokenPayload?.email_verified === true ||
+            idTokenPayload?.email_verified === 'true';
+
+        if (!validIssuer || !validAudience || !emailVerified || !idTokenPayload?.sub || !idTokenPayload?.email) {
+            console.error('[AUTH] Google ID token claims check failed.');
             return c.text('Invalid ID token.', 401);
         }
 

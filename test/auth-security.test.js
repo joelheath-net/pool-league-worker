@@ -419,41 +419,27 @@ describe('JWT & Auth Security', () => {
         expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
-    it('VERIFIES OAuth state and Google JWKS RSA signature in /auth/google/callback', async () => {
+    it('VERIFIES OAuth state and Google ID token OIDC claims in /auth/google/callback (and handles any JWT_SECRET format)', async () => {
         const app = buildTestApp();
 
-        // Generate a real RSA-256 keypair to simulate Google's JWKS signing
-        const keyPair = await crypto.subtle.generateKey(
-            {
-                name: 'RSASSA-PKCS1-v1_5',
-                modulusLength: 2048,
-                publicExponent: new Uint8Array([1, 0, 1]),
-                hash: 'SHA-256'
-            },
-            true,
-            ['sign', 'verify']
-        );
-        const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
-        const privateJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
-        const googlePublicJwk = {
-            ...publicJwk,
-            kid: 'google-key-1',
-            alg: 'RS256',
-            use: 'sig'
+        // Also verify secrets containing substring "PRIVATE" or trailing newline never trip Hono's PEM heuristic
+        const trickyEnv = {
+            ...baseEnv,
+            JWT_SECRET: 'random+PRIVATE+looking/base64/secret==\n'
         };
 
-        const signedIdToken = await sign(
+        const idTokenFromGoogleTokenEndpoint = await sign(
             {
                 iss: 'https://accounts.google.com',
-                aud: baseEnv.GOOGLE_CLIENT_ID,
+                aud: trickyEnv.GOOGLE_CLIENT_ID,
                 sub: 'admin-google-sub-123',
                 email: 'admin@example.com',
                 email_verified: true,
                 name: 'Joel',
                 exp: Math.floor(Date.now() / 1000) + 3600
             },
-            { ...privateJwk, alg: 'RS256', kid: 'google-key-1' },
-            'RS256'
+            'google-token-endpoint-mock-sig',
+            'HS256'
         );
 
         globalThis.fetch = vi.fn(async (url) => {
@@ -463,16 +449,10 @@ describe('JWT & Auth Security', () => {
                         access_token: 'google-access-token',
                         refresh_token: 'google-refresh-token',
                         expires_in: 3600,
-                        id_token: signedIdToken
+                        id_token: idTokenFromGoogleTokenEndpoint
                     }),
                     { status: 200, headers: { 'Content-Type': 'application/json' } }
                 );
-            }
-            if (String(url) === 'https://www.googleapis.com/oauth2/v3/certs') {
-                return new Response(JSON.stringify({ keys: [googlePublicJwk] }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
             }
             throw new Error(`Unexpected fetch to ${url}`);
         });
@@ -481,7 +461,7 @@ describe('JWT & Auth Security', () => {
         const loginRes = await app.request(
             'https://stpaulsleague.joelheath.net/auth/google/login',
             {},
-            baseEnv
+            trickyEnv
         );
         expect(loginRes.status).toBe(302);
         const googleRedirect = new URL(loginRes.headers.get('location'));
@@ -492,18 +472,28 @@ describe('JWT & Auth Security', () => {
         const badStateRes = await app.request(
             `https://stpaulsleague.joelheath.net/auth/google/callback?code=auth-code&state=wrong`,
             { headers: { Cookie: `oauth_state=${state}` } },
-            baseEnv
+            trickyEnv
         );
         expect(badStateRes.status).toBe(400);
 
-        // Step 2: Complete callback with valid state and JWKS-signed id_token
+        // Step 2: Complete callback with valid state and Google token-endpoint id_token
         const callbackRes = await app.request(
             `https://stpaulsleague.joelheath.net/auth/google/callback?code=auth-code&state=${state}`,
             { headers: { Cookie: `oauth_state=${state}` } },
-            baseEnv
+            trickyEnv
         );
         expect(callbackRes.status).toBe(302);
         expect(callbackRes.headers.get('location')).toBe('/');
-        expect(callbackRes.headers.get('set-cookie')).toMatch(/auth_token=eyJ/);
+        const setCookieHeader = callbackRes.headers.get('set-cookie') || '';
+        const match = setCookieHeader.match(/auth_token=([^;]+)/);
+        expect(match).toBeTruthy();
+
+        // Step 3: Verify the issued auth_token works on subsequent admin requests
+        const adminCheck = await app.request(
+            'https://stpaulsleague.joelheath.net/admin/whitelist',
+            { headers: { Cookie: `auth_token=${match[1]}` } },
+            trickyEnv
+        );
+        expect(adminCheck.status).toBe(200);
     });
 });

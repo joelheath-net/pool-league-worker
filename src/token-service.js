@@ -6,16 +6,22 @@ export const JWT_ALGORITHM = 'HS256';
 export const accessTokenExpiresIn = 60 * 15; // 15 minutes
 export const refreshTokenExpiresIn = 60 * 60 * 24 * 90; // 90 days
 
-const getJwtSecret = (env) => {
-    const secret = env?.JWT_SECRET;
-    if (!secret || typeof secret !== 'string') {
+const importHmacKey = async (env, usage) => {
+    const rawSecret = env?.JWT_SECRET;
+    if (!rawSecret || typeof rawSecret !== 'string' || !rawSecret.trim()) {
         throw new Error('JWT_SECRET environment secret is missing or invalid.');
     }
-    return secret;
+    return await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(rawSecret.trim()),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        [usage]
+    );
 };
 
 export const signAuthToken = async (user, env) => {
-    const secret = getJwtSecret(env);
+    const signingKey = await importHmacKey(env, 'sign');
     const now = Math.floor(Date.now() / 1000);
     const payload = {
         sub: user.id,
@@ -24,7 +30,7 @@ export const signAuthToken = async (user, env) => {
         iat: now,
         exp: now + accessTokenExpiresIn,
     };
-    const jwt = await sign(payload, secret, JWT_ALGORITHM);
+    const jwt = await sign(payload, signingKey, JWT_ALGORITHM);
     return { jwt, payload };
 };
 
@@ -35,7 +41,7 @@ export const signAuthToken = async (user, env) => {
  * Passing `exp: false` forces signature verification first; we then evaluate expiration ourselves.
  */
 export const verifySessionToken = async (token, env) => {
-    const secret = getJwtSecret(env);
+    const verifyKey = await importHmacKey(env, 'verify');
     if (!token || typeof token !== 'string') {
         throw new Error('Invalid token');
     }
@@ -45,7 +51,7 @@ export const verifySessionToken = async (token, env) => {
         throw new Error('Invalid JWT algorithm');
     }
 
-    const payload = await verify(token, secret, {
+    const payload = await verify(token, verifyKey, {
         alg: JWT_ALGORITHM,
         exp: false,
         iat: false,
