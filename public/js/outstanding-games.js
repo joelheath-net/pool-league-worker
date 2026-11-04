@@ -5,7 +5,7 @@ async function populateOutstandingGames() {
     const tableBody = document.querySelector('#outstanding-games-body');
     const container = document.querySelector('.container');
     const summaryBanner = document.querySelector('#fixtures-summary');
-    const isAuthenticated = container && container.dataset.isAuthenticated === 'true';
+    const isParticipating = container && container.dataset.isParticipating === 'true';
 
     // Get rounds from URL search params or data attribute
     const urlParams = new URLSearchParams(window.location.search);
@@ -36,7 +36,7 @@ async function populateOutstandingGames() {
         }
 
         if (!games || games.length === 0) {
-            tableBody.innerHTML = html`<tr><td colspan="${isAuthenticated ? 4 : 3}" style="text-align: center;"><div class="table-cell">No outstanding games found.</div></td></tr>`;
+            tableBody.innerHTML = html`<tr><td colspan="${isParticipating ? 4 : 3}" style="text-align: center;"><div class="table-cell">No outstanding games found.</div></td></tr>`;
             return;
         }
 
@@ -67,7 +67,7 @@ async function populateOutstandingGames() {
                             {{= it.roundName }}
                         </div>
                     </td>
-                    ${isAuthenticated
+                    ${isParticipating
                         ? html`<td><div class="table-cell"><a href="{{= it.logUrl }}" class="button-small">Log Game</a></div></td>`
                         : ''}
                 </tr>
@@ -89,7 +89,7 @@ async function populateOutstandingGames() {
             summaryBanner.style.display = 'block';
             summaryBanner.innerHTML = html`<p>${escapeHTML(error.message)}</p>`;
         }
-        tableBody.innerHTML = html`<tr><td colspan="${isAuthenticated ? 4 : 3}" style="text-align: center;"><div class="table-cell">${escapeHTML(error.message)}</div></td></tr>`;
+        tableBody.innerHTML = html`<tr><td colspan="${isParticipating ? 4 : 3}" style="text-align: center;"><div class="table-cell">${escapeHTML(error.message)}</div></td></tr>`;
     }
 }
 

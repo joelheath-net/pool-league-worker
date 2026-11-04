@@ -153,7 +153,7 @@ document.querySelector('#log-game-form').addEventListener('submit', async functi
 
     console.log("Game Logged", payload);
 
-    const response = await fetch('/api/log-game', {
+    const response = await fetch('/api/participating/log-game', {
         method: 'POST',
         body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' }

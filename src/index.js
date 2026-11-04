@@ -9,11 +9,10 @@
  */
 
 import { Hono } from 'hono';
-import { authContextMiddleware } from './middleware';
+import { authContextMiddleware, resolveUserAccessFlags } from './middleware';
 import authRoutes from './auth';
 import apiRoutes from './api';
 import webRoutes from './web';
-import adminRoutes from './admin';
 import { Layout } from '../views/layout';
 import { NotFoundPage } from '../views/not-found';
 
@@ -22,7 +21,6 @@ const authenticatedApp = new Hono();
 authenticatedApp.use('*', authContextMiddleware);
 
 authenticatedApp.route('/api', apiRoutes);
-authenticatedApp.route('/admin', adminRoutes);
 authenticatedApp.route('/', webRoutes);
 
 
@@ -31,10 +29,11 @@ const app = new Hono();
 app.route('/auth', authRoutes);
 app.route('/', authenticatedApp);
 
-app.notFound((c) => {
-    if (c.req.path.startsWith('/api') || c.req.path.startsWith('/admin') || c.req.path.startsWith('/auth')) {
+app.notFound(async (c) => {
+    if (c.req.path.startsWith('/api') || c.req.path.startsWith('/auth')) {
         return c.json({ message: 'Not Found' }, 404);
     }
+    await resolveUserAccessFlags(c);
     return c.html(
         <Layout
             title="Page Not Found - St Paul's League"
@@ -42,6 +41,7 @@ app.notFound((c) => {
             robots="noindex, nofollow"
             canonicalUrl={`https://stpaulsleague.joelheath.net${c.req.path}`}
             isAuthenticated={c.get('isAuthenticated')}
+            isParticipating={c.get('isParticipating')}
             isAdmin={c.get('isAdmin')}
         >
             <NotFoundPage />

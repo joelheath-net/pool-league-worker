@@ -18,7 +18,7 @@ async function initializeEditPage() {
         }
         
         // 2. Fetch users and the specific game data in parallel
-        const gameUrl = `/api/games/${player1Id}/${player2Id}/${rematchId}`;
+        const gameUrl = `/api/participating/games/${player1Id}/${player2Id}/${rematchId}`;
         const [usersResponse, gameResponse] = await Promise.all([
             fetch('/api/users'),
             fetch(gameUrl)
@@ -96,7 +96,7 @@ async function initializeEditPage() {
     updates.rematchId = parseInt(params.get('rematch'), 10);
 
     try {
-        const response = await fetch('/api/game', {
+        const response = await fetch('/api/participating/game', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updates),

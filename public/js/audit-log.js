@@ -7,8 +7,8 @@ async function populateAuditLog() {
     try {
         // 1. Fetch users and log data in parallel
         const [usersResponse, logResponse] = await Promise.all([
-            fetch('/api/users-sensitive'),
-            fetch('/api/audit-log')
+            fetch('/api/auth/users-sensitive'),
+            fetch('/api/auth/audit-log')
         ]);
 
         if (!usersResponse.ok || !logResponse.ok) {

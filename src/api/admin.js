@@ -1,17 +1,17 @@
 import { Hono } from 'hono';
-import { protectAdminAPI } from './middleware.js';
-import * as db from './database.js';
+import { protectAdminAPI } from '../middleware.js';
+import * as db from '../database.js';
 
-const admin = new Hono();
+const adminApi = new Hono();
 
-admin.use('*', protectAdminAPI);
+adminApi.use('*', protectAdminAPI);
 
-admin.post('/reset-db', async (c) => {
+adminApi.post('/reset-db', async (c) => {
     const results = await db.resetGames(c.env.DB);
-    return c.json({ message: "All game records have been deleted.", ...results });
+    return c.json({ message: 'All game records have been deleted.', ...results });
 });
 
-admin.post('/delete-user/:id', async (c) => {
+adminApi.post('/delete-user/:id', async (c) => {
     const id = c.req.param('id');
     if (!id) return c.json({ error: 'User ID is required' }, 400);
     try {
@@ -26,7 +26,7 @@ admin.post('/delete-user/:id', async (c) => {
     }
 });
 
-admin.get('/whitelist', async (c) => {
+adminApi.get('/whitelist', async (c) => {
     try {
         const whitelist = await db.getWhitelistedEmails(c.env.DB);
         return c.json(whitelist);
@@ -36,7 +36,7 @@ admin.get('/whitelist', async (c) => {
     }
 });
 
-admin.post('/whitelist', async (c) => {
+adminApi.post('/whitelist', async (c) => {
     try {
         const { email } = await c.req.json();
         if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -51,7 +51,7 @@ admin.post('/whitelist', async (c) => {
     }
 });
 
-admin.delete('/whitelist/:email', async (c) => {
+adminApi.delete('/whitelist/:email', async (c) => {
     try {
         const rawEmail = c.req.param('email');
         const email = decodeURIComponent(rawEmail);
@@ -67,7 +67,7 @@ admin.delete('/whitelist/:email', async (c) => {
     }
 });
 
-admin.post('/archive-season', async (c) => {
+adminApi.post('/archive-season', async (c) => {
     try {
         const { seasonName } = await c.req.json();
         if (!seasonName) {
@@ -81,7 +81,7 @@ admin.post('/archive-season', async (c) => {
     }
 });
 
-admin.post('/update-players', async (c) => {
+adminApi.post('/update-players', async (c) => {
     try {
         const { players } = await c.req.json();
         if (!Array.isArray(players)) {
@@ -108,7 +108,7 @@ admin.post('/update-players', async (c) => {
     }
 });
 
-admin.post('/update-participation', async (c) => {
+adminApi.post('/update-participation', async (c) => {
     try {
         const { participations } = await c.req.json();
         if (!Array.isArray(participations)) {
@@ -123,4 +123,4 @@ admin.post('/update-participation', async (c) => {
     }
 });
 
-export default admin;
+export default adminApi;

@@ -26,7 +26,6 @@ export const signAuthToken = async (user, env) => {
     const payload = {
         sub: user.id,
         email: user.email,
-        role: user.role,
         iat: now,
         exp: now + accessTokenExpiresIn,
     };

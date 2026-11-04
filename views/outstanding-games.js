@@ -1,6 +1,6 @@
-export const OutstandingGamesPage = ({ rounds = 2, isAuthenticated = false }) => {
+export const OutstandingGamesPage = ({ rounds = 2, isParticipating = false }) => {
     return (
-        <div class="container" data-is-authenticated={isAuthenticated} data-rounds={rounds}>
+        <div class="container" data-is-participating={isParticipating} data-rounds={rounds}>
             <div class="centre-container">
                 <h1 class="centre-title">Outstanding Games</h1>
                 <div class="fixtures-controls-card">
@@ -33,14 +33,14 @@ export const OutstandingGamesPage = ({ rounds = 2, isAuthenticated = false }) =>
                             <th scope="col"><div class="table-cell">Player 1</div></th>
                             <th scope="col"><div class="table-cell">Player 2</div></th>
                             <th scope="col"><div class="table-cell">Rematch Round</div></th>
-                            {isAuthenticated
+                            {isParticipating
                                 ? <th scope="col"><div class="table-cell">Log Game</div></th>
                                 : ''}
                         </tr>
                     </thead>
                     <tbody id="outstanding-games-body">
                         <tr>
-                            <td colspan={isAuthenticated ? 4 : 3} style="text-align: center;">
+                            <td colspan={isParticipating ? 4 : 3} style="text-align: center;">
                                 <div class="table-cell">Calculating outstanding games...</div>
                             </td>
                         </tr>

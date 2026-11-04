@@ -94,7 +94,7 @@ async function populateWhitelist() {
     if (!listContainer) return;
 
     try {
-        const response = await fetch('/admin/whitelist');
+        const response = await fetch('/api/admin/whitelist');
         if (!response.ok) throw new Error('Failed to fetch whitelist');
         const whitelist = await response.json();
 
@@ -119,7 +119,7 @@ async function populateWhitelist() {
                 }
 
                 try {
-                    const deleteResponse = await fetch(`/admin/whitelist/${encodeURIComponent(email)}`, {
+                    const deleteResponse = await fetch(`/api/admin/whitelist/${encodeURIComponent(email)}`, {
                         method: 'DELETE'
                     });
 
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resetDbButton.addEventListener('click', async () => {
             if (confirm('Are you sure you want to reset the database? This action cannot be undone.')) {
                 try {
-                    const response = await fetch('/admin/reset-db', {
+                    const response = await fetch('/api/admin/reset-db', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
                 try {
-                    const response = await fetch(`/admin/delete-user/${id}`, {
+                    const response = await fetch(`/api/admin/delete-user/${id}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!email) return;
 
             try {
-                const response = await fetch('/admin/whitelist', {
+                const response = await fetch('/api/admin/whitelist', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (confirm(`Are you sure you want to archive the current season as "${seasonName}"? This will save the final leaderboard and delete all current game records. This action cannot be undone.`)) {
                 try {
-                    const response = await fetch('/admin/archive-season', {
+                    const response = await fetch('/api/admin/archive-season', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ seasonName })
@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             savePlayersBtn.textContent = 'Saving...';
 
             try {
-                const response = await fetch('/admin/update-players', {
+                const response = await fetch('/api/admin/update-players', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ players })

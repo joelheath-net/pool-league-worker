@@ -8,7 +8,7 @@ async function loadProfile() {
     const form = document.querySelector('#profile-form');
 
     try {
-        const response = await fetch('/api/profile');
+        const response = await fetch('/api/auth/profile');
         if (!response.ok) throw new Error('Failed to fetch profile');
         const profile = await response.json();
 
@@ -34,7 +34,7 @@ document.querySelector('#profile-form').addEventListener('submit', async functio
 
     try {
         // PATCH the data to the server
-        const response = await fetch('/api/profile', {
+        const response = await fetch('/api/auth/profile', {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -253,7 +253,7 @@ async function initPushNotifications() {
                     applicationServerKey: urlB64ToUint8Array(vapidPublicKey)
                 });
 
-                const res = await fetch('/api/push-subscribe', {
+                const res = await fetch('/api/auth/push-subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newSub)
@@ -279,7 +279,7 @@ async function initPushNotifications() {
         testBtn.textContent = 'Sending...';
 
         try {
-            const res = await fetch('/api/push-test', { method: 'POST' });
+            const res = await fetch('/api/auth/push-test', { method: 'POST' });
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
                 throw new Error(data.message || 'Failed to dispatch test notification');

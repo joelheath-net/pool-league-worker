@@ -4,7 +4,7 @@
 async function populateGameList() {
     const tableBody = document.querySelector('#games-list-body');
     const container = document.querySelector('.container');
-    const isAuthenticated = container && container.dataset.isAuthenticated === 'true';
+    const isParticipating = container && container.dataset.isParticipating === 'true';
 
     //tableBody.innerHTML = html`<tr><td colspan="7" style="text-align: center;">Loading game history...</td></tr>`;
 
@@ -27,7 +27,7 @@ async function populateGameList() {
         const userMap = new Map(users.map(user => [user.id, user]));
 
         if (games.length === 0) {
-                tableBody.innerHTML = html`<tr><td colspan="${isAuthenticated ? 7 : 6}" style="text-align: center;"><div class="table-cell">No games have been logged yet.</div></td></tr>`;
+                tableBody.innerHTML = html`<tr><td colspan="${isParticipating ? 7 : 6}" style="text-align: center;"><div class="table-cell">No games have been logged yet.</div></td></tr>`;
                 return;
         }
 
@@ -89,7 +89,7 @@ async function populateGameList() {
                             {{ } }}
                         </div>
                     </td>
-                    ${isAuthenticated 
+                    ${isParticipating 
                         ? html`<td><div class="table-cell"><a href="{{= it.editUrl }}" class="button-small">Edit</a></div></td>` 
                         : ''}
                 </tr>
@@ -101,7 +101,7 @@ async function populateGameList() {
 
     } catch (error) {
         console.error("Error populating game list:", error);
-        tableBody.innerHTML = html`<tr><td colspan="${isAuthenticated ? 7 : 6}" style="text-align: center;"><div class="table-cell">Failed to load game history.</div></td></tr>`;
+        tableBody.innerHTML = html`<tr><td colspan="${isParticipating ? 7 : 6}" style="text-align: center;"><div class="table-cell">Failed to load game history.</div></td></tr>`;
     }
 }
 

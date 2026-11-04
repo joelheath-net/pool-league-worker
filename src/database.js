@@ -51,8 +51,19 @@ export const getUserById = async (db, id) => {
 };
 
 export const getUserByIdSensitive = async (db, id) => {
-    const user = await db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').bind(id).first();
+    const user = await db.prepare('SELECT id, name, email FROM users WHERE id = ?').bind(id).first();
     return keysToCamel(user);
+};
+
+export const getUserAccessFlags = async (db, userId) => {
+    if (!db || !userId) return { isAdmin: false, isParticipating: false, exists: false };
+    const row = await db.prepare('SELECT role, participating FROM users WHERE id = ?').bind(userId).first();
+    if (!row) return { isAdmin: false, isParticipating: false, exists: false };
+    return {
+        isAdmin: row.role === 'admin',
+        isParticipating: Boolean(row.participating),
+        exists: true,
+    };
 };
 
 export const updateProfile = async (db, userId, { name, team, teamColor }) => {
@@ -75,7 +86,6 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
             id: googleUser.sub,
             name: googleUser.name,
             email: googleUser.email,
-            role: 'user',
         };
         await db.prepare(`
             INSERT INTO users (id, name, email, role, google_access_token, google_access_token_expires_at, google_refresh_token, participating)
@@ -112,7 +122,7 @@ export const findOrCreateUser = async (db, googleUser, tokens) => {
 
 // VERY SENSITIVE, DO NOT EXPOSE REFRESH TOKEN
 export const getUserForRefresh = async (db, userId) => {
-    const user = await db.prepare('SELECT id, email, role, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
+    const user = await db.prepare('SELECT id, email, google_refresh_token FROM users WHERE id = ?').bind(userId).first();
     return keysToCamel(user);
 };
 

@@ -1,8 +1,8 @@
-export const GamesPage = ({ isAuthenticated }) => {
-    const colspan = isAuthenticated ? 7 : 6;
+export const GamesPage = ({ isAuthenticated = false, isParticipating = false }) => {
+    const colspan = isParticipating ? 7 : 6;
 
     return (
-        <div class="container" data-is-authenticated={isAuthenticated}>
+        <div class="container" data-is-authenticated={isAuthenticated} data-is-participating={isParticipating}>
             <h1 class="centre-title" style="margin-bottom: 8px;">Game History</h1>
             <div class="subtitle-container">
                 <a href="/outstanding-games" class="secondary-link">Calculate Outstanding Games</a>
@@ -21,7 +21,7 @@ export const GamesPage = ({ isAuthenticated }) => {
                             <th scope="col"><div class="table-cell">Fouled on Black</div></th>
                             <th scope="col"><div class="table-cell">Balls Remaining</div></th>
                             <th scope="col"><div class="table-cell">Rematch Round</div></th>
-                            {isAuthenticated
+                            {isParticipating
                                 ? <th scope="col"><div class="table-cell">Edit</div></th>
                                 : ''}
                         </tr>

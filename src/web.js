@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { protectWeb, protectAdminWeb } from './middleware';
+import { protectWeb, protectParticipatingWeb, protectAdminWeb, resolveUserAccessFlags } from './middleware';
 import * as db from './database';
 
 import { Layout } from '../views/layout';
@@ -82,6 +82,8 @@ ${allRoutes.map((path) => `  <url>
 });
 
 web.use('*', async (c, next) => {
+    await resolveUserAccessFlags(c);
+
     c.setRenderer(async (content, props) => {
         const title = props.title || "St Paul's League";
         const description = props.description;
@@ -90,10 +92,11 @@ web.use('*', async (c, next) => {
         const script = props.script;
         const canonicalUrl = props.canonicalUrl || `https://stpaulsleague.joelheath.net${c.req.path}`;
         const isAuthenticated = c.get('isAuthenticated');
+        const isParticipating = c.get('isParticipating');
         const isAdmin = c.get('isAdmin');
 
         return c.html(
-            <Layout {...{ title, description, robots, style, script, canonicalUrl, isAuthenticated, isAdmin }}>
+            <Layout {...{ title, description, robots, style, script, canonicalUrl, isAuthenticated, isParticipating, isAdmin }}>
                 {content}
             </Layout>
         );
@@ -118,18 +121,27 @@ web.get('/about', (c) => {
 });
 
 web.get('/game-list', (c) => {
-    return c.render(<GamesPage isAuthenticated={c.get('isAuthenticated')} />, {
-        title: "Game History - St Paul's League",
-        description: "Browse the complete match history, scores, and head-to-head game results for St Paul's Pool League.",
-        script: '/js/game-list.js'
-    });
+    return c.render(
+        <GamesPage
+            isAuthenticated={c.get('isAuthenticated')}
+            isParticipating={c.get('isParticipating')}
+        />,
+        {
+            title: "Game History - St Paul's League",
+            description: "Browse the complete match history, scores, and head-to-head game results for St Paul's Pool League.",
+            script: '/js/game-list.js'
+        }
+    );
 });
 
 web.get('/outstanding-games', (c) => {
     const roundsParam = c.req.query('rounds');
     const rounds = roundsParam ? parseInt(roundsParam, 10) : 2;
     return c.render(
-        <OutstandingGamesPage rounds={isNaN(rounds) || rounds < 1 ? 2 : rounds} isAuthenticated={c.get('isAuthenticated')} />,
+        <OutstandingGamesPage
+            rounds={isNaN(rounds) || rounds < 1 ? 2 : rounds}
+            isParticipating={c.get('isParticipating')}
+        />,
         {
             title: "Outstanding Games - St Paul's League",
             description: "View unplayed matches, round fixtures, and upcoming games that need to be played in St Paul's Pool League.",
@@ -193,15 +205,7 @@ web.get('/terms', (c) => {
     return c.redirect('/terms-of-service', 301);
 });
 
-// --- Protected Routes ---
-web.get('/log-game', protectWeb, (c) => {
-    return c.render(<LogGamePage />, {
-        title: "Log a Game - St Paul's League",
-        robots: 'noindex, nofollow',
-        script: '/js/log-game.js'
-    });
-});
-
+// --- Authenticated Routes ---
 web.get('/audit-log', protectWeb, (c) => {
     return c.render(<AuditPage />, {
         title: "Audit Log - St Paul's League",
@@ -219,7 +223,16 @@ web.get('/profile', protectWeb, (c) => {
     });
 });
 
-web.get('/edit-game', protectWeb, (c) => {
+// --- Participating-Only Routes ---
+web.get('/log-game', protectParticipatingWeb, (c) => {
+    return c.render(<LogGamePage />, {
+        title: "Log a Game - St Paul's League",
+        robots: 'noindex, nofollow',
+        script: '/js/log-game.js'
+    });
+});
+
+web.get('/edit-game', protectParticipatingWeb, (c) => {
     return c.render(<EditGamePage />, {
         title: "Edit Game - St Paul's League",
         robots: 'noindex, nofollow',
@@ -228,7 +241,7 @@ web.get('/edit-game', protectWeb, (c) => {
     });
 });
 
-// Admin-only route
+// --- Admin-Only Route ---
 web.get('/admin-panel', protectAdminWeb, (c) => {
     return c.render(<AdminPage />, {
         title: "Admin Panel - St Paul's League",

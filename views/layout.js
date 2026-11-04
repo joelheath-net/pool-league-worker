@@ -105,11 +105,13 @@ const Head = ({ title, description, robots, style, cutoff, canonicalUrl }) => {
     `;
 };
 
-const Header = ({ isAuthenticated, isAdmin }) => {
+const Header = ({ isAuthenticated, isParticipating, isAdmin }) => {
     const authenticatedNav = html`
         <nav>
             <div data-nosnippet style="display: contents;">
-                <a href="/log-game">Record New Game</a>
+                ${isParticipating
+                    ? html`<a href="/log-game">Record New Game</a>`
+                    : ''}
                 <a href="/game-list">View Games List</a>
                 <a href="/seasons">Season Archive</a>
                 ${isAdmin
@@ -180,7 +182,7 @@ export const Layout = (props) => {
         <html lang="en">
         ${<Head title={props.title} description={props.description} robots={props.robots} style={style} cutoff={cutoff} canonicalUrl={props.canonicalUrl} />}
         <body>
-            ${<Header isAuthenticated={props.isAuthenticated} isAdmin={props.isAdmin} />}
+            ${<Header isAuthenticated={props.isAuthenticated} isParticipating={props.isParticipating} isAdmin={props.isAdmin} />}
 
             <main style="flex-grow: 1;">
                 ${props.children}
