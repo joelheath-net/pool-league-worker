@@ -27,12 +27,10 @@ async function populateAuditLog() {
         // 2. Process each log entry and create its HTML card
         const entriesHtml = auditLog.map(rev => {
             const author = userMap.get(rev.authorId) || { name: 'Unknown', email: 'N/A' };
-            const player1 = userMap.get(rev.player1Id) || { name: 'Unknown' };
-            const player2 = userMap.get(rev.player2Id) || { name: 'Unknown' };
-            const winner = userMap.get(rev.winnerId) || { name: 'Unknown' };
+            const homePlayer = userMap.get(rev.homePlayerId) || { name: 'Unknown' };
+            const awayPlayer = userMap.get(rev.awayPlayerId) || { name: 'Unknown' };
+            const winner = rev.winnerHome ? homePlayer : awayPlayer;
 
-
-            // Format data for display
             const actionText = rev.revisionId === 0
                 ? 'created a new record'
                 : 'updated an existing record';
@@ -49,7 +47,7 @@ async function populateAuditLog() {
                         <p class="meta">on {{= it.authoredDate }} (by {{= it.author.email }})</p>
                     </div>
                     <div class="audit-details">
-                        <h4>{{= it.player1.name }} vs. {{= it.player2.name }} ({{= it.rematchText }})</h4>
+                        <h4>{{= it.homePlayer.name }} vs. {{= it.awayPlayer.name }} ({{= it.rematchText }})</h4>
                         <ul>
                             <li><strong>Winner:</strong> {{= it.winner.name }}</li>
                             <li><strong>Date Played:</strong> {{= it.playedDate }}</li>
@@ -58,15 +56,14 @@ async function populateAuditLog() {
                         </ul>
                     </div>
                 </div>
-            `, { actionText, authoredDate, author, player1, player2, winner, playedDate, rematchText, fouledText, rev });
+            `, { actionText, authoredDate, author, homePlayer, awayPlayer, winner, playedDate, rematchText, fouledText, rev });
         }).join('');
 
         // 3. Populate the container
         container.innerHTML = entriesHtml;
-
     } catch (error) {
-        console.error("Error populating audit log:", error);
-        container.innerHTML = html`<p class="error">Failed to load audit log. ${error.message}</p>`;
+        console.error('Error populating audit log:', error);
+        container.innerHTML = html`<p class="error">Failed to load audit log. ${escapeHTML(error.message)}</p>`;
     }
 }
 

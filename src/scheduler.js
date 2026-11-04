@@ -19,8 +19,11 @@
  * @returns {Object} { games, totalOutstanding, rematchRounds, participatingCount, limit }
  */
 export function calculateOutstandingGames({ users = [], games = [], rematchRounds = 2, limit = 50 } = {}) {
-    const k = parseInt(rematchRounds, 10);
-    if (isNaN(k) || k < 1) {
+    const k = typeof rematchRounds === 'number'
+        ? rematchRounds
+        : (/^[1-9]\d*$/.test(String(rematchRounds)) ? Number(rematchRounds) : NaN);
+
+    if (!Number.isInteger(k) || k < 1) {
         throw new Error('Rematch rounds must be a positive integer of at least 1.');
     }
     if (k > 99) {
@@ -53,25 +56,25 @@ export function calculateOutstandingGames({ users = [], games = [], rematchRound
     const playedRematches = new Map();
 
     for (const game of games) {
-        const p1Id = game.player1Id;
-        const p2Id = game.player2Id;
+        const homeId = game.homePlayerId;
+        const awayId = game.awayPlayerId;
 
         // Friendly matches involving non-participating players do not count
-        if (!userMap.has(p1Id) || !userMap.has(p2Id)) {
+        if (!userMap.has(homeId) || !userMap.has(awayId)) {
             continue;
         }
 
-        gamesPlayed.set(p1Id, gamesPlayed.get(p1Id) + 1);
-        gamesPlayed.set(p2Id, gamesPlayed.get(p2Id) + 1);
+        gamesPlayed.set(homeId, gamesPlayed.get(homeId) + 1);
+        gamesPlayed.set(awayId, gamesPlayed.get(awayId) + 1);
 
-        const canonicalP1 = p1Id < p2Id ? p1Id : p2Id;
-        const canonicalP2 = p1Id < p2Id ? p2Id : p1Id;
+        const canonicalP1 = homeId < awayId ? homeId : awayId;
+        const canonicalP2 = homeId < awayId ? awayId : homeId;
         const pairKey = `${canonicalP1}:${canonicalP2}`;
 
         if (!playedRematches.has(pairKey)) {
             playedRematches.set(pairKey, new Set());
         }
-        if (typeof game.rematchId === 'number') {
+        if (typeof game.rematchId === 'number' && Number.isInteger(game.rematchId)) {
             playedRematches.get(pairKey).add(game.rematchId);
         }
     }
@@ -155,34 +158,33 @@ export function calculateOutstandingGames({ users = [], games = [], rematchRound
         }
 
         const bestPair = activePairs[bestIndex];
-        const p1User = userMap.get(bestPair.p1);
-        const p2User = userMap.get(bestPair.p2);
-        const p1Count = gamesPlayed.get(bestPair.p1);
-        const p2Count = gamesPlayed.get(bestPair.p2);
+        const homeUser = userMap.get(bestPair.p1);
+        const awayUser = userMap.get(bestPair.p2);
+        const homeCount = gamesPlayed.get(bestPair.p1);
+        const awayCount = gamesPlayed.get(bestPair.p2);
 
         scheduledGames.push({
             order: scheduledGames.length + 1,
-            player1: {
-                id: p1User.id,
-                name: p1User.name,
-                team: p1User.team,
-                teamColor: p1User.teamColor
+            homePlayer: {
+                id: homeUser.id,
+                name: homeUser.name,
+                team: homeUser.team,
+                teamColor: homeUser.teamColor
             },
-            player2: {
-                id: p2User.id,
-                name: p2User.name,
-                team: p2User.team,
-                teamColor: p2User.teamColor
+            awayPlayer: {
+                id: awayUser.id,
+                name: awayUser.name,
+                team: awayUser.team,
+                teamColor: awayUser.teamColor
             },
-            rematchId: bestPair.nextRematch,
             roundName: bestPair.nextRematch === 0 ? 'First Match' : `Rematch ${bestPair.nextRematch}`,
-            player1Games: p1Count,
-            player2Games: p2Count
+            homePlayerGames: homeCount,
+            awayPlayerGames: awayCount
         });
 
         // Simulate game played
-        gamesPlayed.set(bestPair.p1, p1Count + 1);
-        gamesPlayed.set(bestPair.p2, p2Count + 1);
+        gamesPlayed.set(bestPair.p1, homeCount + 1);
+        gamesPlayed.set(bestPair.p2, awayCount + 1);
 
         // Advance to next unplayed rematch for this pair
         let nextR = bestPair.nextRematch + 1;

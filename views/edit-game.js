@@ -8,13 +8,13 @@ export const EditGamePage = () => {
                 <div class="form-group winner-selection-section">
                     <label>Winner</label>
                     <div class="winner-toggle-container">
-                        <button type="button" id="winner-p1-btn" class="winner-toggle-btn active" data-player="1">
+                        <button type="button" id="winner-home-btn" class="winner-toggle-btn active" data-winner-home="true">
                             <span class="winner-status-icon">🏆</span>
-                            <span id="winner-p1-name" class="winner-player-name">Player 1</span>
+                            <span id="winner-home-name" class="winner-player-name">Player 1</span>
                         </button>
-                        <button type="button" id="winner-p2-btn" class="winner-toggle-btn" data-player="2">
+                        <button type="button" id="winner-away-btn" class="winner-toggle-btn" data-winner-home="false">
                             <span class="winner-status-icon">🏆</span>
-                            <span id="winner-p2-name" class="winner-player-name">Player 2</span>
+                            <span id="winner-away-name" class="winner-player-name">Player 2</span>
                         </button>
                     </div>
                 </div>
@@ -23,7 +23,7 @@ export const EditGamePage = () => {
                     <div class="loser-details-title">Loser Performance</div>
                     <div class="form-group">
                         <label for="balls-remaining">Balls Remaining</label>
-                        <input type="number" min="0" max="8" id="balls-remaining" name="ballsRemaining" required placeholder="Number 0–8" />
+                        <input type="number" min="0" max="8" step="1" id="balls-remaining" name="ballsRemaining" required placeholder="Number 0–8" />
                     </div>
                     <div class="form-group form-group-checkbox">
                         <label for="fouled-on-black" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">

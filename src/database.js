@@ -139,64 +139,160 @@ export const updateUserTokens = async (db, userId, accessToken, expiresIn) => {
 
 // --- Game Functions ---
 
-export const createGameRevision = async (db, { winner, loser, ballsRemaining, fouledOnBlack, date, authorId }) => {
-    const player1Id = winner < loser ? winner : loser;
-    const player2Id = winner < loser ? loser : winner;
+const formatGameRow = (row) => {
+    if (!row) return null;
+    const camel = keysToCamel(row);
+    return {
+        gameId: camel.gameId,
+        homePlayerId: camel.homePlayerId,
+        awayPlayerId: camel.awayPlayerId,
+        winnerHome: camel.winnerId === camel.homePlayerId,
+        rematchId: camel.rematchId,
+        revisionId: camel.revisionId,
+        authorId: camel.authorId,
+        authoredAt: camel.authoredAt,
+        ballsRemaining: camel.ballsRemaining,
+        fouledOnBlack: Boolean(camel.fouledOnBlack),
+        playedAt: camel.playedAt,
+    };
+};
 
-    const latestRematch = await db.prepare(
-        'SELECT rematch_id FROM game_revisions WHERE player1_id = ? AND player2_id = ? ORDER BY rematch_id DESC LIMIT 1'
-    ).bind(player1Id, player2Id).first();
-    const rematchId = latestRematch ? keysToCamel(latestRematch).rematchId + 1 : 0;
+export const createGame = async (db, { homePlayerId, awayPlayerId, winnerHome, ballsRemaining, fouledOnBlack, playedAt, authorId }) => {
+    const winnerId = winnerHome ? homePlayerId : awayPlayerId;
+    const authoredAt = new Date().toISOString();
 
-    return await db.prepare(`
-        INSERT INTO game_revisions (player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(player1Id, player2Id, rematchId, winner, ballsRemaining, fouledOnBlack, date, authorId, new Date().toISOString()).run();
+    const [gameInsertResult] = await db.batch([
+        db.prepare(`
+            INSERT INTO games (home_player_id, away_player_id, rematch_id)
+            SELECT ?, ?, COALESCE(MAX(rematch_id) + 1, 0)
+            FROM games
+            WHERE (home_player_id = ? AND away_player_id = ?)
+               OR (home_player_id = ? AND away_player_id = ?)
+        `).bind(
+            homePlayerId,
+            awayPlayerId,
+            homePlayerId,
+            awayPlayerId,
+            awayPlayerId,
+            homePlayerId
+        ),
+        db.prepare(`
+            INSERT INTO game_revisions (
+                game_id, revision_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at
+            )
+            VALUES (last_insert_rowid(), 0, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            winnerId,
+            ballsRemaining,
+            fouledOnBlack ? 1 : 0,
+            playedAt,
+            authorId,
+            authoredAt
+        )
+    ]);
+
+    return { gameId: gameInsertResult?.meta?.last_row_id };
 };
 
 export const getGameList = async (db) => {
     const { results } = await db.prepare(`
         WITH RankedRevisions AS (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY player1_id, player2_id, rematch_id ORDER BY revision_id DESC) as rn
-            FROM game_revisions
+            SELECT
+                g.id AS game_id,
+                g.home_player_id,
+                g.away_player_id,
+                g.rematch_id,
+                gr.revision_id,
+                gr.winner_id,
+                gr.author_id,
+                gr.authored_at,
+                gr.balls_remaining,
+                gr.fouled_on_black,
+                gr.played_at,
+                ROW_NUMBER() OVER (PARTITION BY gr.game_id ORDER BY gr.revision_id DESC) AS rn
+            FROM games g
+            JOIN game_revisions gr ON gr.game_id = g.id
         )
-        SELECT * FROM RankedRevisions WHERE rn = 1 ORDER BY played_at DESC, player1_id, player2_id, rematch_id DESC
+        SELECT * FROM RankedRevisions
+        WHERE rn = 1
+        ORDER BY played_at DESC, game_id DESC
     `).all();
-    return keysToCamel(results);
+    return (results || []).map(formatGameRow);
 };
 
 export const getAuditLog = async (db) => {
-    const { results } = await db.prepare('SELECT * FROM game_revisions ORDER BY authored_at DESC').all();
-    return keysToCamel(results);
+    const { results } = await db.prepare(`
+        SELECT
+            g.id AS game_id,
+            g.home_player_id,
+            g.away_player_id,
+            g.rematch_id,
+            gr.revision_id,
+            gr.winner_id,
+            gr.author_id,
+            gr.authored_at,
+            gr.balls_remaining,
+            gr.fouled_on_black,
+            gr.played_at
+        FROM game_revisions gr
+        JOIN games g ON g.id = gr.game_id
+        ORDER BY gr.authored_at DESC, gr.game_id DESC, gr.revision_id DESC
+    `).all();
+    return (results || []).map(formatGameRow);
 };
 
-export const getGameByCompositeId = async (db, player1Id, player2Id, rematchId) => {
-    const game = await db.prepare(`
-        SELECT * FROM game_revisions
-        WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-        ORDER BY revision_id DESC
-        LIMIT 1`
-    ).bind(player1Id, player2Id, rematchId).first();
-    return keysToCamel(game);
+export const getGameById = async (db, gameId) => {
+    const row = await db.prepare(`
+        SELECT
+            g.id AS game_id,
+            g.home_player_id,
+            g.away_player_id,
+            g.rematch_id,
+            gr.revision_id,
+            gr.winner_id,
+            gr.author_id,
+            gr.authored_at,
+            gr.balls_remaining,
+            gr.fouled_on_black,
+            gr.played_at
+        FROM games g
+        JOIN game_revisions gr ON gr.game_id = g.id
+        WHERE g.id = ?
+        ORDER BY gr.revision_id DESC
+        LIMIT 1
+    `).bind(gameId).first();
+    return formatGameRow(row);
 };
 
-export const updateGame = async (db, { player1Id, player2Id, rematchId, winnerId, ballsRemaining, fouledOnBlack, playedAt, authorId }) => {
-    const latestRevisionResult = await db.prepare(`
-        SELECT revision_id FROM game_revisions
-        WHERE player1_id = ? AND player2_id = ? AND rematch_id = ?
-        ORDER BY revision_id DESC LIMIT 1`
-    ).bind(player1Id, player2Id, rematchId).first();
-
-    if (!latestRevisionResult) {
+export const updateGame = async (db, gameId, { winnerHome, ballsRemaining, fouledOnBlack, playedAt, authorId }) => {
+    const existingGame = await getGameById(db, gameId);
+    if (!existingGame) {
         throw new Error('Cannot update a game that does not exist.');
     }
-    const latestRevision = keysToCamel(latestRevisionResult);
 
-    const newRevisionId = latestRevision.revisionId + 1;
+    const winnerId = winnerHome ? existingGame.homePlayerId : existingGame.awayPlayerId;
+    const authoredAt = new Date().toISOString();
+
     return await db.prepare(`
-        INSERT INTO game_revisions (revision_id, player1_id, player2_id, rematch_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(newRevisionId, player1Id, player2Id, rematchId, winnerId, ballsRemaining, fouledOnBlack, playedAt, authorId, new Date().toISOString()).run();
+        INSERT INTO game_revisions (
+            game_id, revision_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at
+        )
+        SELECT
+            ?,
+            COALESCE(MAX(revision_id) + 1, 0),
+            ?, ?, ?, ?, ?, ?
+        FROM game_revisions
+        WHERE game_id = ?
+    `).bind(
+        gameId,
+        winnerId,
+        ballsRemaining,
+        fouledOnBlack ? 1 : 0,
+        playedAt,
+        authorId,
+        authoredAt,
+        gameId
+    ).run();
 };
 
 export const getLeaderboardStats = async (db) => {
@@ -206,15 +302,15 @@ export const getLeaderboardStats = async (db) => {
     const players = new Map(results.map(p => [p.id, { wins: 0, losses: 0, ballsRemaining: 0, foulsOnBlack: 0 }]));
 
     for (const game of games) {
-        const { player1Id, player2Id, winnerId, ballsRemaining, fouledOnBlack } = game;
+        const { homePlayerId, awayPlayerId, winnerHome, ballsRemaining, fouledOnBlack } = game;
 
         // Games involving any non-participating player are not included in leaderboard tallies
-        if (!players.has(player1Id) || !players.has(player2Id)) {
+        if (!players.has(homePlayerId) || !players.has(awayPlayerId)) {
             continue;
         }
 
-        const winner = winnerId;
-        const loser = winnerId === player1Id ? player2Id : player1Id;
+        const winner = winnerHome ? homePlayerId : awayPlayerId;
+        const loser = winnerHome ? awayPlayerId : homePlayerId;
 
         if (players.has(winner)) players.get(winner).wins++;
         if (players.has(loser)) {
@@ -252,7 +348,11 @@ export const updatePlayers = async (db, players) => {
 };
 
 export const resetGames = async (db) => {
-    return await db.prepare('DELETE FROM game_revisions').run();
+    const [, gamesDeleteResult] = await db.batch([
+        db.prepare('DELETE FROM game_revisions'),
+        db.prepare('DELETE FROM games')
+    ]);
+    return gamesDeleteResult;
 };
 
 // --- Whitelist Functions ---
@@ -380,9 +480,9 @@ export const getAllTimeLeaderboardStats = async (db) => {
     // 3. Tally all current season games (all players, not just participating)
     const games = await getGameList(db);
     for (const game of games) {
-        const { player1Id, player2Id, winnerId, ballsRemaining, fouledOnBlack } = game;
-        const winner = winnerId;
-        const loser = winnerId === player1Id ? player2Id : player1Id;
+        const { homePlayerId, awayPlayerId, winnerHome, ballsRemaining, fouledOnBlack } = game;
+        const winner = winnerHome ? homePlayerId : awayPlayerId;
+        const loser = winnerHome ? awayPlayerId : homePlayerId;
 
         if (!players.has(winner)) {
             players.set(winner, {
@@ -518,12 +618,14 @@ export const archiveSeason = async (db, seasonName) => {
         );
     });
 
-    // 5. Prepare statement to clear current games
-    const clearGamesStatement = db.prepare('DELETE FROM game_revisions');
+    // 5. Prepare statements to clear current games and revisions
+    const clearRevisionsStatement = db.prepare('DELETE FROM game_revisions');
+    const clearGamesStatement = db.prepare('DELETE FROM games');
 
     // 6. Batch all operations together in a transaction
     await db.batch([
         ...insertStatements,
+        clearRevisionsStatement,
         clearGamesStatement
     ]);
 

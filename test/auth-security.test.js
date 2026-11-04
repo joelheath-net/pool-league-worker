@@ -339,6 +339,18 @@ describe('JWT, Roles & Auth Security', () => {
         // Non-participating player gets 403 on all participating API endpoints
         expect(
             (await fullApp.request(
+                'https://stpaulsleague.joelheath.net/api/participating/games',
+                {
+                    method: 'POST',
+                    headers: { Cookie: `auth_token=${spectatorJwt}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                },
+                baseEnv
+            )).status
+        ).toBe(403);
+
+        expect(
+            (await fullApp.request(
                 'https://stpaulsleague.joelheath.net/api/participating/log-game',
                 {
                     method: 'POST',
@@ -351,7 +363,7 @@ describe('JWT, Roles & Auth Security', () => {
 
         expect(
             (await fullApp.request(
-                'https://stpaulsleague.joelheath.net/api/participating/games/p1/p2/0',
+                'https://stpaulsleague.joelheath.net/api/participating/games/1',
                 { headers: { Cookie: `auth_token=${spectatorJwt}` } },
                 baseEnv
             )).status
@@ -359,7 +371,7 @@ describe('JWT, Roles & Auth Security', () => {
 
         expect(
             (await fullApp.request(
-                'https://stpaulsleague.joelheath.net/api/participating/game',
+                'https://stpaulsleague.joelheath.net/api/participating/games/1',
                 {
                     method: 'PATCH',
                     headers: { Cookie: `auth_token=${spectatorJwt}`, 'Content-Type': 'application/json' },
@@ -378,7 +390,7 @@ describe('JWT, Roles & Auth Security', () => {
 
         expect(
             (await fullApp.request(
-                'https://stpaulsleague.joelheath.net/api/participating/log-game',
+                'https://stpaulsleague.joelheath.net/api/participating/games',
                 {
                     method: 'POST',
                     headers: { Cookie: `auth_token=${nonPartAdminJwt}`, 'Content-Type': 'application/json' },

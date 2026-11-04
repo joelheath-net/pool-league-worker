@@ -54,13 +54,34 @@ authenticatedApi.get('/profile', async (c) => {
 
 authenticatedApi.patch('/profile', async (c) => {
     const userPayload = c.get('user');
-    const profileData = await c.req.json();
+    let profileData;
+    try {
+        profileData = await c.req.json();
+    } catch {
+        return c.json({ message: 'Invalid JSON request body' }, 400);
+    }
 
-    if (!/^#[0-9a-fA-F]{6}$/.test(profileData.teamColor)) {
+    if (!profileData || typeof profileData !== 'object' || Array.isArray(profileData)) {
+        return c.json({ message: 'Invalid profile data format' }, 400);
+    }
+
+    if (typeof profileData.name !== 'string' || !profileData.name.trim()) {
+        return c.json({ message: 'Display name is required' }, 400);
+    }
+
+    if (typeof profileData.team !== 'string' || !profileData.team.trim()) {
+        return c.json({ message: 'Team name is required' }, 400);
+    }
+
+    if (typeof profileData.teamColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(profileData.teamColor)) {
         return c.json({ message: 'Invalid team color format. Must be hex color codes in format #RRGGBB' }, 400);
     }
 
-    await db.updateProfile(c.env.DB, userPayload.sub, profileData);
+    await db.updateProfile(c.env.DB, userPayload.sub, {
+        name: profileData.name.trim(),
+        team: profileData.team.trim(),
+        teamColor: profileData.teamColor
+    });
     return c.json({ message: 'Profile updated successfully' });
 });
 

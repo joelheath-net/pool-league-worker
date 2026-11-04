@@ -12,27 +12,46 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 
+CREATE TABLE IF NOT EXISTS games (
+    id               INTEGER   PRIMARY KEY AUTOINCREMENT,
+    home_player_id   TEXT      NOT NULL,
+    away_player_id   TEXT      NOT NULL,
+    rematch_id       INTEGER   NOT NULL CHECK (typeof(rematch_id) = 'integer' AND rematch_id >= 0),
+
+    CHECK (home_player_id != away_player_id),
+
+    FOREIGN KEY (home_player_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (away_player_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_games_pair_rematch
+    ON games (
+        CASE WHEN home_player_id < away_player_id THEN home_player_id ELSE away_player_id END,
+        CASE WHEN home_player_id < away_player_id THEN away_player_id ELSE home_player_id END,
+        rematch_id
+    );
+
+
 CREATE TABLE IF NOT EXISTS game_revisions (
-    player1_id       TEXT      NOT NULL,
-    player2_id       TEXT      NOT NULL,
-    rematch_id       INTEGER   NOT NULL,
+    game_id          INTEGER   NOT NULL,
+    revision_id      INTEGER   NOT NULL  DEFAULT 0 CHECK (typeof(revision_id) = 'integer' AND revision_id >= 0),
     winner_id        TEXT      NOT NULL,
 
-    revision_id      INTEGER   NOT NULL  DEFAULT 0,
     author_id        TEXT      NOT NULL,
     authored_at      DATETIME  NOT NULL  DEFAULT CURRENT_TIMESTAMP,
 
-    balls_remaining  INTEGER   NOT NULL,
+    balls_remaining  INTEGER   NOT NULL  CHECK (typeof(balls_remaining) = 'integer' AND balls_remaining >= 0 AND balls_remaining <= 8),
     fouled_on_black  BOOLEAN   NOT NULL  CHECK (fouled_on_black IN (0, 1)),
     played_at        DATETIME  NOT NULL,
 
-    PRIMARY KEY (player1_id, player2_id, rematch_id, revision_id),
+    PRIMARY KEY (game_id, revision_id),
 
-    FOREIGN KEY (player1_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (author_id)  REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (winner_id)  REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (game_id)   REFERENCES games(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_game_revisions_game_id ON game_revisions(game_id);
 
 
 CREATE TABLE IF NOT EXISTS archived_seasons (
@@ -77,17 +96,3 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
-
-
--- CREATE TRIGGER IF NOT EXISTS prevent_game_revision_updates
--- BEFORE UPDATE ON game_revisions
--- BEGIN
---     SELECT RAISE(ABORT, 'Game revisions cannot be updated');
--- END;
-
-
--- CREATE TRIGGER IF NOT EXISTS prevent_game_revision_deletions
--- BEFORE DELETE ON game_revisions
--- BEGIN
---     SELECT RAISE(ABORT, 'Game revisions cannot be deleted');
--- END;

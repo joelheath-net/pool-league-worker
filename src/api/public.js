@@ -31,11 +31,11 @@ publicApi.get('/outstanding-games', async (c) => {
     const roundsParam = c.req.query('rounds');
     let rematchRounds = 2;
     if (roundsParam !== undefined) {
-        rematchRounds = parseInt(roundsParam, 10);
-        if (isNaN(rematchRounds) || rematchRounds < 1) {
+        if (!/^[1-9]\d*$/.test(roundsParam)) {
             return c.json({ message: 'Rematch rounds must be a positive integer of at least 1.' }, 400);
         }
-        if (rematchRounds > 99) {
+        rematchRounds = Number(roundsParam);
+        if (!Number.isSafeInteger(rematchRounds) || rematchRounds > 99) {
             return c.json({ message: 'Rematch rounds exceeds maximum allowed limit of 99.' }, 400);
         }
     }

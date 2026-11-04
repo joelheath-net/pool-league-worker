@@ -42,24 +42,24 @@ async function populateOutstandingGames() {
 
         // Render rows
         const rowsHtml = games.map(game => {
-            const p1 = game.player1;
-            const p2 = game.player2;
+            const homePlayer = game.homePlayer;
+            const awayPlayer = game.awayPlayer;
 
-            const p1Color = getContrastingTextColor(p1.teamColor || '#ffffff');
-            const p2Color = getContrastingTextColor(p2.teamColor || '#ffffff');
+            const homeColor = getContrastingTextColor(homePlayer.teamColor || '#ffffff');
+            const awayColor = getContrastingTextColor(awayPlayer.teamColor || '#ffffff');
 
-            const logUrl = `/log-game?player1=${encodeURIComponent(p1.id)}&player2=${encodeURIComponent(p2.id)}`;
+            const logUrl = `/log-game?homePlayerId=${encodeURIComponent(homePlayer.id)}&awayPlayerId=${encodeURIComponent(awayPlayer.id)}`;
 
             return eta.render(html`
                 <tr>
-                    <td style="background-color: {{= it.p1.teamColor }};">
-                        <div class="table-cell" style="color: {{= it.p1Color }};">
-                            {{= it.p1.name }} ({{= it.p1.team }})
+                    <td style="background-color: {{= it.homePlayer.teamColor }};">
+                        <div class="table-cell" style="color: {{= it.homeColor }};">
+                            {{= it.homePlayer.name }} ({{= it.homePlayer.team }})
                         </div>
                     </td>
-                    <td style="background-color: {{= it.p2.teamColor }};">
-                        <div class="table-cell" style="color: {{= it.p2Color }};">
-                            {{= it.p2.name }} ({{= it.p2.team }})
+                    <td style="background-color: {{= it.awayPlayer.teamColor }};">
+                        <div class="table-cell" style="color: {{= it.awayColor }};">
+                            {{= it.awayPlayer.name }} ({{= it.awayPlayer.team }})
                         </div>
                     </td>
                     <td>
@@ -72,19 +72,18 @@ async function populateOutstandingGames() {
                         : ''}
                 </tr>
             `, {
-                p1,
-                p2,
-                p1Color,
-                p2Color,
+                homePlayer,
+                awayPlayer,
+                homeColor,
+                awayColor,
                 roundName: game.roundName,
                 logUrl
             });
         }).join('');
 
         tableBody.innerHTML = rowsHtml;
-
     } catch (error) {
-        console.error("Error populating outstanding games:", error);
+        console.error('Error populating outstanding games:', error);
         if (summaryBanner) {
             summaryBanner.style.display = 'block';
             summaryBanner.innerHTML = html`<p>${escapeHTML(error.message)}</p>`;
