@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS games (
     home_player_id   TEXT      NOT NULL,
     away_player_id   TEXT      NOT NULL,
     rematch_id       INTEGER   NOT NULL CHECK (typeof(rematch_id) = 'integer' AND rematch_id >= 0),
+    is_deleted       BOOLEAN   NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
 
     CHECK (home_player_id != away_player_id),
 
@@ -29,12 +30,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_games_pair_rematch
         CASE WHEN home_player_id < away_player_id THEN home_player_id ELSE away_player_id END,
         CASE WHEN home_player_id < away_player_id THEN away_player_id ELSE home_player_id END,
         rematch_id
-    );
+    )
+    WHERE is_deleted = 0;
 
 
 CREATE TABLE IF NOT EXISTS game_revisions (
     game_id          INTEGER   NOT NULL,
     revision_id      INTEGER   NOT NULL  DEFAULT 0 CHECK (typeof(revision_id) = 'integer' AND revision_id >= 0),
+    is_deleted       BOOLEAN   NOT NULL  DEFAULT 0 CHECK (is_deleted IN (0, 1)),
     winner_id        TEXT      NOT NULL,
 
     author_id        TEXT      NOT NULL,

@@ -381,6 +381,17 @@ describe('JWT, Roles & Auth Security', () => {
             )).status
         ).toBe(403);
 
+        expect(
+            (await fullApp.request(
+                'https://stpaulsleague.joelheath.net/api/participating/games/1',
+                {
+                    method: 'DELETE',
+                    headers: { Cookie: `auth_token=${spectatorJwt}` }
+                },
+                baseEnv
+            )).status
+        ).toBe(403);
+
         // Non-participating ADMIN is also blocked from recording/editing games while still allowed into /admin-panel
         mockUsers['admin-google-sub-123'].participating = 0;
         const { jwt: nonPartAdminJwt } = await signAuthToken(

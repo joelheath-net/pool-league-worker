@@ -15,6 +15,9 @@ async function initializeEditPage() {
     const matchupTitle = document.querySelector('#matchup-title');
 
     let loadedGame = null;
+    let homePlayerName = 'Unknown Player';
+    let awayPlayerName = 'Unknown Player';
+    let rematchLabel = 'First Match';
     let winnerHome = true;
 
     try {
@@ -47,6 +50,9 @@ async function initializeEditPage() {
         const awayPlayer = userMap.get(game.awayPlayerId) || { id: game.awayPlayerId, name: 'Unknown Player' };
 
         const rematchText = game.rematchId === 0 ? 'First Match' : `Rematch ${game.rematchId}`;
+        homePlayerName = homePlayer.name;
+        awayPlayerName = awayPlayer.name;
+        rematchLabel = rematchText;
         matchupTitle.textContent = `${homePlayer.name} vs. ${awayPlayer.name} (${rematchText})`;
 
         const winnerHomeBtn = document.querySelector('#winner-home-btn');
@@ -134,6 +140,37 @@ async function initializeEditPage() {
             alert('An error occurred while saving. Please try again.\n' + error.message);
         }
     });
+
+    const deleteBtn = document.querySelector('#delete-game-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async function () {
+            const confirmed = confirm(
+                `Are you sure you want to delete this game (${homePlayerName} vs. ${awayPlayerName}, ${rematchLabel})?`
+            );
+            if (!confirmed) return;
+
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Deleting...';
+
+            try {
+                const response = await fetch(`/api/participating/games/${encodeURIComponent(loadedGame.gameId)}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Failed to delete game.');
+                }
+
+                window.location.href = '/game-list';
+            } catch (error) {
+                console.error('Error deleting game:', error);
+                alert('An error occurred while deleting. Please try again.\n' + error.message);
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = 'Delete Game';
+            }
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', initializeEditPage);

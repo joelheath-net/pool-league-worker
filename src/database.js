@@ -149,6 +149,7 @@ const formatGameRow = (row) => {
         winnerHome: camel.winnerId === camel.homePlayerId,
         rematchId: camel.rematchId,
         revisionId: camel.revisionId,
+        isDeleted: Boolean(camel.isDeleted),
         authorId: camel.authorId,
         authoredAt: camel.authoredAt,
         ballsRemaining: camel.ballsRemaining,
@@ -166,8 +167,11 @@ export const createGame = async (db, { homePlayerId, awayPlayerId, winnerHome, b
             INSERT INTO games (home_player_id, away_player_id, rematch_id)
             SELECT ?, ?, COALESCE(MAX(rematch_id) + 1, 0)
             FROM games
-            WHERE (home_player_id = ? AND away_player_id = ?)
-               OR (home_player_id = ? AND away_player_id = ?)
+            WHERE is_deleted = 0
+              AND (
+                  (home_player_id = ? AND away_player_id = ?)
+                  OR (home_player_id = ? AND away_player_id = ?)
+              )
         `).bind(
             homePlayerId,
             awayPlayerId,
@@ -178,9 +182,9 @@ export const createGame = async (db, { homePlayerId, awayPlayerId, winnerHome, b
         ),
         db.prepare(`
             INSERT INTO game_revisions (
-                game_id, revision_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at
+                game_id, revision_id, is_deleted, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at
             )
-            VALUES (last_insert_rowid(), 0, ?, ?, ?, ?, ?, ?)
+            VALUES (last_insert_rowid(), 0, 0, ?, ?, ?, ?, ?, ?)
         `).bind(
             winnerId,
             ballsRemaining,
@@ -203,6 +207,7 @@ export const getGameList = async (db) => {
                 g.away_player_id,
                 g.rematch_id,
                 gr.revision_id,
+                gr.is_deleted,
                 gr.winner_id,
                 gr.author_id,
                 gr.authored_at,
@@ -212,6 +217,7 @@ export const getGameList = async (db) => {
                 ROW_NUMBER() OVER (PARTITION BY gr.game_id ORDER BY gr.revision_id DESC) AS rn
             FROM games g
             JOIN game_revisions gr ON gr.game_id = g.id
+            WHERE g.is_deleted = 0
         )
         SELECT * FROM RankedRevisions
         WHERE rn = 1
@@ -228,6 +234,7 @@ export const getAuditLog = async (db) => {
             g.away_player_id,
             g.rematch_id,
             gr.revision_id,
+            gr.is_deleted,
             gr.winner_id,
             gr.author_id,
             gr.authored_at,
@@ -249,6 +256,7 @@ export const getGameById = async (db, gameId) => {
             g.away_player_id,
             g.rematch_id,
             gr.revision_id,
+            gr.is_deleted,
             gr.winner_id,
             gr.author_id,
             gr.authored_at,
@@ -258,6 +266,7 @@ export const getGameById = async (db, gameId) => {
         FROM games g
         JOIN game_revisions gr ON gr.game_id = g.id
         WHERE g.id = ?
+          AND g.is_deleted = 0
         ORDER BY gr.revision_id DESC
         LIMIT 1
     `).bind(gameId).first();
@@ -275,14 +284,17 @@ export const updateGame = async (db, gameId, { winnerHome, ballsRemaining, foule
 
     return await db.prepare(`
         INSERT INTO game_revisions (
-            game_id, revision_id, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at
+            game_id, revision_id, is_deleted, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at
         )
         SELECT
             ?,
-            COALESCE(MAX(revision_id) + 1, 0),
+            COALESCE(MAX(gr.revision_id) + 1, 0),
+            0,
             ?, ?, ?, ?, ?, ?
-        FROM game_revisions
-        WHERE game_id = ?
+        FROM game_revisions gr
+        JOIN games g ON g.id = gr.game_id
+        WHERE gr.game_id = ?
+          AND g.is_deleted = 0
     `).bind(
         gameId,
         winnerId,
@@ -293,6 +305,71 @@ export const updateGame = async (db, gameId, { winnerHome, ballsRemaining, foule
         authoredAt,
         gameId
     ).run();
+};
+
+export const deleteGame = async (db, gameId, { authorId }) => {
+    const authoredAt = new Date().toISOString();
+    const REMATCH_SHIFT_OFFSET = 1000000;
+
+    const [, , markDeletedResult] = await db.batch([
+        // 1. Snapshot the latest recorded stats into a deletion revision (only if game exists & is not already deleted)
+        db.prepare(`
+            INSERT INTO game_revisions (
+                game_id, revision_id, is_deleted, winner_id, balls_remaining, fouled_on_black, played_at, author_id, authored_at
+            )
+            SELECT
+                g.id,
+                gr.revision_id + 1,
+                1,
+                gr.winner_id,
+                gr.balls_remaining,
+                gr.fouled_on_black,
+                gr.played_at,
+                ?,
+                ?
+            FROM games g
+            JOIN game_revisions gr ON gr.game_id = g.id
+            WHERE g.id = ?
+              AND g.is_deleted = 0
+            ORDER BY gr.revision_id DESC
+            LIMIT 1
+        `).bind(authorId, authoredAt, gameId),
+
+        // 2. Temporarily offset all later active rematches for this pair to avoid transient unique-index collisions
+        db.prepare(`
+            UPDATE games
+            SET rematch_id = rematch_id + ${REMATCH_SHIFT_OFFSET}
+            WHERE is_deleted = 0
+              AND EXISTS (
+                  SELECT 1 FROM games target
+                  WHERE target.id = ?
+                    AND target.is_deleted = 0
+                    AND games.rematch_id > target.rematch_id
+                    AND (
+                        (games.home_player_id = target.home_player_id AND games.away_player_id = target.away_player_id)
+                        OR (games.home_player_id = target.away_player_id AND games.away_player_id = target.home_player_id)
+                    )
+              )
+        `).bind(gameId),
+
+        // 3. Soft-delete the game so it leaves active indices, game lists, and leaderboards
+        db.prepare(`
+            UPDATE games
+            SET is_deleted = 1
+            WHERE id = ?
+              AND is_deleted = 0
+        `).bind(gameId),
+
+        // 4. Finalize the -1 shift on all later active rematches for this pair
+        db.prepare(`
+            UPDATE games
+            SET rematch_id = rematch_id - ${REMATCH_SHIFT_OFFSET + 1}
+            WHERE is_deleted = 0
+              AND rematch_id >= ${REMATCH_SHIFT_OFFSET}
+        `)
+    ]);
+
+    return { deleted: (markDeletedResult?.meta?.changes ?? 0) > 0 };
 };
 
 export const getLeaderboardStats = async (db) => {

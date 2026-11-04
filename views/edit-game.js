@@ -39,6 +39,10 @@ export const EditGamePage = () => {
                 </div>
 
                 <button type="submit">Save Changes</button>
+
+                <div class="delete-game-section">
+                    <button type="button" id="delete-game-btn" class="button-danger">Delete Game</button>
+                </div>
             </form>
         </div>
     );

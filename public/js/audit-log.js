@@ -31,9 +31,12 @@ async function populateAuditLog() {
             const awayPlayer = userMap.get(rev.awayPlayerId) || { name: 'Unknown' };
             const winner = rev.winnerHome ? homePlayer : awayPlayer;
 
-            const actionText = rev.revisionId === 0
-                ? 'created a new record'
-                : 'updated an existing record';
+            const isDeleted = Boolean(rev.isDeleted);
+            const actionText = isDeleted
+                ? 'deleted a game'
+                : (rev.revisionId === 0
+                    ? 'created a new record'
+                    : 'updated an existing record');
 
             const authoredDate = new Date(rev.authoredAt).toLocaleString('en-GB');
             const playedDate = new Date(rev.playedAt).toLocaleDateString('en-GB');
@@ -41,7 +44,7 @@ async function populateAuditLog() {
             const fouledText = rev.fouledOnBlack ? 'Yes' : 'No';
 
             return eta.render(html`
-                <div class="audit-entry">
+                <div class="audit-entry {{= it.isDeleted ? 'audit-entry-deleted' : '' }}">
                     <div class="audit-entry-header">
                         <h3>{{= it.author.name }} {{= it.actionText }}</h3>
                         <p class="meta">on {{= it.authoredDate }} (by {{= it.author.email }})</p>
@@ -56,7 +59,7 @@ async function populateAuditLog() {
                         </ul>
                     </div>
                 </div>
-            `, { actionText, authoredDate, author, homePlayer, awayPlayer, winner, playedDate, rematchText, fouledText, rev });
+            `, { isDeleted, actionText, authoredDate, author, homePlayer, awayPlayer, winner, playedDate, rematchText, fouledText, rev });
         }).join('');
 
         // 3. Populate the container

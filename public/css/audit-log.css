@@ -16,6 +16,15 @@
     color: #0056b3;
 }
 
+.audit-entry.audit-entry-deleted {
+    border-left: 4px solid #dc3545;
+    background-color: #fffafa;
+}
+
+.audit-entry.audit-entry-deleted .audit-entry-header h3 {
+    color: #dc3545;
+}
+
 .audit-entry-header .meta {
     font-size: 0.9em;
     color: #6c757d;

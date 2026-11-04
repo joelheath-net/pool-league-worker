@@ -255,9 +255,9 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
             const gamesRows = sqlite.prepare('SELECT * FROM games ORDER BY id ASC').all();
             expect(gamesRows).toHaveLength(3);
             expect(gamesRows.map((g) => ({ ...g }))).toEqual([
-                { id: 1, home_player_id: 'alice', away_player_id: 'bob', rematch_id: 0 },
-                { id: 2, home_player_id: 'alice', away_player_id: 'charlie', rematch_id: 0 },
-                { id: 3, home_player_id: 'bob', away_player_id: 'alice', rematch_id: 1 }
+                { id: 1, home_player_id: 'alice', away_player_id: 'bob', rematch_id: 0, is_deleted: 0 },
+                { id: 2, home_player_id: 'alice', away_player_id: 'charlie', rematch_id: 0, is_deleted: 0 },
+                { id: 3, home_player_id: 'bob', away_player_id: 'alice', rematch_id: 1, is_deleted: 0 }
             ]);
 
             // Verify all 4 revisions survived and fractional 3.6 was rounded to integer 4
@@ -741,6 +741,13 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
 
                 const patchRes = await patchGame(badId, validPayload);
                 expect(patchRes.status, `PATCH gameId=${badId}`).toBe(400);
+
+                const delRes = await fullApp.request(
+                    `https://example.com/api/participating/games/${badId}`,
+                    { method: 'DELETE', headers: { Cookie: `auth_token=${aliceJwt}` } },
+                    env
+                );
+                expect(delRes.status, `DELETE gameId=${badId}`).toBe(400);
             }
 
             // Valid integer ID that doesn't exist -> 404
@@ -751,6 +758,15 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
             );
             expect(missingGet.status).toBe(404);
             expect((await patchGame(999, validPayload)).status).toBe(404);
+            expect(
+                (
+                    await fullApp.request(
+                        'https://example.com/api/participating/games/999',
+                        { method: 'DELETE', headers: { Cookie: `auth_token=${aliceJwt}` } },
+                        env
+                    )
+                ).status
+            ).toBe(404);
 
             // Strict rounds validation on /api/outstanding-games
             for (const badRounds of ['0', '-2', '1.5', '2abc', '100']) {
@@ -761,6 +777,291 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
                 );
                 expect(res.status, `rounds=${badRounds}`).toBe(400);
             }
+        });
+    });
+
+    describe('Deleting Games, Audit Log Tracking & Rematch Renumbering', () => {
+        beforeEach(() => {
+            sqlite.exec(SETUP_SQL);
+            seedUsers(sqlite);
+        });
+
+        it('deletes a middle rematch (Rematch 0, 1, 2 -> delete 1), mutates all latter rematches down, preserves full stats in audit log, and continues numbering cleanly', async () => {
+            const logMatch = async (payload, jwt = aliceJwt) => {
+                const res = await fullApp.request(
+                    'https://example.com/api/participating/games',
+                    {
+                        method: 'POST',
+                        headers: { Cookie: `auth_token=${jwt}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    },
+                    env
+                );
+                expect(res.status).toBe(201);
+                return (await res.json()).gameId;
+            };
+
+            // Log 4 matches between Alice & Bob (Rematch 0, 1, 2, 3) with mixed home/away orientations, plus 1 unrelated match (Alice vs Charlie)
+            const g0 = await logMatch({
+                homePlayerId: 'alice',
+                awayPlayerId: 'bob',
+                winnerHome: true,
+                ballsRemaining: 2,
+                fouledOnBlack: false,
+                playedAt: '2026-02-01'
+            });
+            const g1 = await logMatch({
+                homePlayerId: 'bob',
+                awayPlayerId: 'alice',
+                winnerHome: true, // Bob wins initially
+                ballsRemaining: 4,
+                fouledOnBlack: false,
+                playedAt: '2026-02-02'
+            });
+            const gOther = await logMatch({
+                homePlayerId: 'alice',
+                awayPlayerId: 'charlie',
+                winnerHome: false,
+                ballsRemaining: 1,
+                fouledOnBlack: false,
+                playedAt: '2026-02-03'
+            });
+            const g2 = await logMatch({
+                homePlayerId: 'alice',
+                awayPlayerId: 'bob',
+                winnerHome: false,
+                ballsRemaining: 6,
+                fouledOnBlack: true,
+                playedAt: '2026-02-04'
+            });
+            const g3 = await logMatch({
+                homePlayerId: 'bob',
+                awayPlayerId: 'alice',
+                winnerHome: false,
+                ballsRemaining: 3,
+                fouledOnBlack: false,
+                playedAt: '2026-02-05'
+            });
+
+            // Edit g1 (Rematch 1) once before deleting so we verify the deletion snapshot captures the latest edited stats
+            const editRes = await fullApp.request(
+                `https://example.com/api/participating/games/${g1}`,
+                {
+                    method: 'PATCH',
+                    headers: { Cookie: `auth_token=${aliceJwt}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        homePlayerId: 'bob',
+                        awayPlayerId: 'alice',
+                        winnerHome: false, // Edited: Alice won with 7 balls remaining & foul on black
+                        ballsRemaining: 7,
+                        fouledOnBlack: true,
+                        playedAt: '2026-02-02'
+                    })
+                },
+                env
+            );
+            expect(editRes.status).toBe(200);
+
+            // Delete g1 (Rematch 1) as Bob
+            const delRes = await fullApp.request(
+                `https://example.com/api/participating/games/${g1}`,
+                {
+                    method: 'DELETE',
+                    headers: { Cookie: `auth_token=${bobJwt}` }
+                },
+                env
+            );
+            expect(delRes.status).toBe(200);
+
+            // Deleted game cannot be fetched, edited, or deleted a second time
+            expect(
+                (
+                    await fullApp.request(
+                        `https://example.com/api/participating/games/${g1}`,
+                        { headers: { Cookie: `auth_token=${aliceJwt}` } },
+                        env
+                    )
+                ).status
+            ).toBe(404);
+            expect(
+                (
+                    await fullApp.request(
+                        `https://example.com/api/participating/games/${g1}`,
+                        {
+                            method: 'PATCH',
+                            headers: { Cookie: `auth_token=${aliceJwt}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                homePlayerId: 'bob',
+                                awayPlayerId: 'alice',
+                                winnerHome: true,
+                                ballsRemaining: 1,
+                                fouledOnBlack: false,
+                                playedAt: '2026-02-02'
+                            })
+                        },
+                        env
+                    )
+                ).status
+            ).toBe(404);
+            expect(
+                (
+                    await fullApp.request(
+                        `https://example.com/api/participating/games/${g1}`,
+                        { method: 'DELETE', headers: { Cookie: `auth_token=${bobJwt}` } },
+                        env
+                    )
+                ).status
+            ).toBe(404);
+
+            // Active game list excludes g1 and has mutated g2 (2 -> 1) and g3 (3 -> 2), while g0 stays 0 and gOther stays 0
+            const gameList = await (await fullApp.request('https://example.com/api/game-list', {}, env)).json();
+            expect(gameList.map((g) => ({ gameId: g.gameId, rematchId: g.rematchId }))).toEqual([
+                { gameId: g3, rematchId: 2 },
+                { gameId: g2, rematchId: 1 },
+                { gameId: gOther, rematchId: 0 },
+                { gameId: g0, rematchId: 0 }
+            ]);
+
+            // Audit log preserves creation (rev 0), edit (rev 1), AND deletion (rev 2) with all recorded stats for g1
+            const auditLog = await (
+                await fullApp.request(
+                    'https://example.com/api/auth/audit-log',
+                    { headers: { Cookie: `auth_token=${aliceJwt}` } },
+                    env
+                )
+            ).json();
+            const g1Revs = auditLog
+                .filter((r) => r.gameId === g1)
+                .sort((a, b) => a.revisionId - b.revisionId);
+            expect(g1Revs).toHaveLength(3);
+            expect(g1Revs[0]).toMatchObject({
+                gameId: g1,
+                revisionId: 0,
+                isDeleted: false,
+                authorId: 'alice',
+                winnerHome: true,
+                ballsRemaining: 4,
+                fouledOnBlack: false,
+                playedAt: '2026-02-02',
+                rematchId: 1
+            });
+            expect(g1Revs[1]).toMatchObject({
+                gameId: g1,
+                revisionId: 1,
+                isDeleted: false,
+                authorId: 'alice',
+                winnerHome: false,
+                ballsRemaining: 7,
+                fouledOnBlack: true,
+                playedAt: '2026-02-02',
+                rematchId: 1
+            });
+            expect(g1Revs[2]).toMatchObject({
+                gameId: g1,
+                revisionId: 2,
+                isDeleted: true,
+                authorId: 'bob',
+                winnerHome: false,
+                ballsRemaining: 7,
+                fouledOnBlack: true,
+                playedAt: '2026-02-02',
+                rematchId: 1
+            });
+
+            // Leaderboard excludes deleted g1 completely:
+            // Remaining active games:
+            // g0: Alice beat Bob (2 balls)
+            // gOther: Charlie beat Alice (1 ball)
+            // g2: Bob beat Alice (6 balls, foul on black)
+            // g3: Alice beat Bob (3 balls)
+            const lb = await (await fullApp.request('https://example.com/api/leaderboard', {}, env)).json();
+            const byId = Object.fromEntries(lb.map((p) => [p.playerId, p]));
+            expect(byId.alice).toEqual({ playerId: 'alice', wins: 2, losses: 2, ballsRemaining: 7, foulsOnBlack: 1 });
+            expect(byId.bob).toEqual({ playerId: 'bob', wins: 1, losses: 2, ballsRemaining: 5, foulsOnBlack: 0 });
+            expect(byId.charlie).toEqual({ playerId: 'charlie', wins: 1, losses: 0, ballsRemaining: 0, foulsOnBlack: 0 });
+
+            // Logging another Alice vs Bob game now gets rematchId = 3 (continuing after 0, 1, 2)
+            const gNext = await logMatch({
+                homePlayerId: 'alice',
+                awayPlayerId: 'bob',
+                winnerHome: true,
+                ballsRemaining: 1,
+                fouledOnBlack: false,
+                playedAt: '2026-02-06'
+            });
+            const gNextFetched = await (
+                await fullApp.request(
+                    `https://example.com/api/participating/games/${gNext}`,
+                    { headers: { Cookie: `auth_token=${aliceJwt}` } },
+                    env
+                )
+            ).json();
+            expect(gNextFetched.rematchId).toBe(3);
+        });
+
+        it('resets rematch numbering back to 0 when the only match between a pair is deleted, and renders #delete-game-btn on /edit-game', async () => {
+            const createRes = await fullApp.request(
+                'https://example.com/api/participating/games',
+                {
+                    method: 'POST',
+                    headers: { Cookie: `auth_token=${aliceJwt}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        homePlayerId: 'alice',
+                        awayPlayerId: 'bob',
+                        winnerHome: true,
+                        ballsRemaining: 2,
+                        fouledOnBlack: false,
+                        playedAt: '2026-02-10'
+                    })
+                },
+                env
+            );
+            const { gameId: firstId } = await createRes.json();
+
+            const delRes = await fullApp.request(
+                `https://example.com/api/participating/games/${firstId}`,
+                { method: 'DELETE', headers: { Cookie: `auth_token=${aliceJwt}` } },
+                env
+            );
+            expect(delRes.status).toBe(200);
+
+            const replacementRes = await fullApp.request(
+                'https://example.com/api/participating/games',
+                {
+                    method: 'POST',
+                    headers: { Cookie: `auth_token=${aliceJwt}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        homePlayerId: 'bob',
+                        awayPlayerId: 'alice',
+                        winnerHome: true,
+                        ballsRemaining: 5,
+                        fouledOnBlack: false,
+                        playedAt: '2026-02-11'
+                    })
+                },
+                env
+            );
+            expect(replacementRes.status).toBe(201);
+            const { gameId: secondId } = await replacementRes.json();
+            const secondGame = await (
+                await fullApp.request(
+                    `https://example.com/api/participating/games/${secondId}`,
+                    { headers: { Cookie: `auth_token=${aliceJwt}` } },
+                    env
+                )
+            ).json();
+            expect(secondGame.rematchId).toBe(0);
+
+            // Verify /edit-game page HTML contains the Delete Game button at the bottom of the form
+            const editPageRes = await fullApp.request(
+                `https://example.com/edit-game?id=${secondId}`,
+                { headers: { Cookie: `auth_token=${aliceJwt}` } },
+                env
+            );
+            expect(editPageRes.status).toBe(200);
+            const html = await editPageRes.text();
+            expect(html).toContain('id="delete-game-btn"');
+            expect(html).toContain('Delete Game');
         });
     });
 });

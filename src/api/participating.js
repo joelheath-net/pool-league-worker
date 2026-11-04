@@ -253,4 +253,36 @@ participatingApi.patch('/games/:gameId', async (c) => {
     }
 });
 
+participatingApi.delete('/games/:gameId', async (c) => {
+    const gameId = parseGameIdParam(c.req.param('gameId'));
+    if (gameId === null) {
+        return c.json({ message: 'Invalid game ID' }, 400);
+    }
+
+    const userPayload = c.get('user');
+
+    try {
+        const prevRanks = await getLeaderboardRanks(c.env.DB);
+        const { deleted } = await db.deleteGame(c.env.DB, gameId, {
+            authorId: userPayload.sub
+        });
+
+        if (!deleted) {
+            return c.json({ message: 'Game not found' }, 404);
+        }
+
+        const newRanks = await getLeaderboardRanks(c.env.DB);
+        const rankChanges = diffRankings(prevRanks, newRanks);
+
+        if (rankChanges.length > 0) {
+            runBackgroundTask(c, notifyRankChanges(c.env, rankChanges));
+        }
+
+        return c.json({ message: 'Game deleted successfully.', gameId }, 200);
+    } catch (error) {
+        console.error('Error deleting game:', error);
+        return c.json({ message: 'An internal error occurred.' }, 500);
+    }
+});
+
 export default participatingApi;
