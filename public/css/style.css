@@ -57,6 +57,44 @@ th, td {
 
 .table-cell {
     margin: 12px;
+}
+
+th, td {
+    vertical-align: middle;
+}
+
+.th-short,
+.player-team-sub {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .leaderboard-wrapper .team-col,
+    .leaderboard-wrapper .th-full {
+        display: none;
+    }
+
+    .leaderboard-wrapper .th-short {
+        display: inline;
+    }
+
+    .leaderboard-wrapper .player-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .leaderboard-wrapper .player-name {
+        font-size: 1rem;
+        line-height: 1.25;
+    }
+
+    .leaderboard-wrapper .player-team-sub {
+        display: block;
+        font-size: 0.75rem;
+        line-height: 1.2;
+        opacity: 0.85;
+    }
     
 }
 

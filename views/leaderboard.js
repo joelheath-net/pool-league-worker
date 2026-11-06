@@ -34,14 +34,14 @@ export const LeaderboardPage = () => {
                         <thead>
                             <tr>
                                 <th scope="col" class="sticky" style="background-color: #e9ecef;"><div class="table-cell">Player</div></th>
-                                <th scope="col"><div class="table-cell">Team Name</div></th>
-                                <th scope="col"><div class="table-cell">Points</div></th>
-                                <th scope="col"><div class="table-cell">Wins</div></th>
-                                <th scope="col"><div class="table-cell">Losses</div></th>
-                                <th scope="col"><div class="table-cell">Fouls on Black</div></th>
-                                <th scope="col"><div class="table-cell">Ball Difference</div></th>
-                                <th scope="col"><div class="table-cell">Played</div></th>
-                                <th scope="col"><div class="table-cell">Win:Loss Ratio</div></th>
+                                <th scope="col" class="team-col"><div class="table-cell">Team Name</div></th>
+                                <th scope="col"><div class="table-cell"><span class="th-full">Points</span><span class="th-short">Pts</span></div></th>
+                                <th scope="col"><div class="table-cell"><span class="th-full">Wins</span><span class="th-short">W</span></div></th>
+                                <th scope="col"><div class="table-cell"><span class="th-full">Losses</span><span class="th-short">L</span></div></th>
+                                <th scope="col"><div class="table-cell"><span class="th-full">Fouls on Black</span><span class="th-short">F.o.B.</span></div></th>
+                                <th scope="col"><div class="table-cell"><span class="th-full">Ball Difference</span><span class="th-short">B.D.</span></div></th>
+                                <th scope="col"><div class="table-cell"><span class="th-full">Played</span><span class="th-short">Pld</span></div></th>
+                                <th scope="col"><div class="table-cell"><span class="th-full">Win:Loss Ratio</span><span class="th-short">W/L</span></div></th>
                             </tr>
                         </thead>
                         <tbody id="leaderboard-body">

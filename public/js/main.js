@@ -330,8 +330,13 @@ function renderLeaderboardRows(players, tbodySelector) {
 
         return eta.render(html`
             <tr>
-                <td class="sticky" style="background-color: {{= it.color }}"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.name }}</div></td>
-                <td style="background-color: {{= it.color }}"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.team }}</div></td>
+                <td class="sticky" style="background-color: {{= it.color }}">
+                    <div class="table-cell player-cell" style="color: {{= it.textColor }}">
+                        <span class="player-name">{{= it.name }}</span>
+                        <span class="player-team-sub">{{= it.team }}</span>
+                    </div>
+                </td>
+                <td class="team-col" style="background-color: {{= it.color }}"><div class="table-cell" style="color: {{= it.textColor }}">{{= it.team }}</div></td>
                 <td><div class="table-cell">{{= it.points }}</div></td>
                 <td><div class="table-cell">{{= it.wins }}</div></td>
                 <td><div class="table-cell">{{= it.losses }}</div></td>
