@@ -371,6 +371,33 @@ header nav a:hover, header nav a.active {
         flex-shrink: 0;
     }
 
+    header .header-mobile-actions {
+        gap: 12px;
+        -webkit-app-region: no-drag;
+        app-region: no-drag;
+    }
+
+    header .mobile-add-game {
+        width: 1.35rem;
+        height: 1.15rem;
+        -webkit-app-region: no-drag;
+        app-region: no-drag;
+    }
+
+    header .mobile-add-game span {
+        border-radius: 2px;
+    }
+
+    header .mobile-add-game span:first-child {
+        width: 100%;
+        height: 2px;
+    }
+
+    header .mobile-add-game span:last-child {
+        width: 2px;
+        height: 100%;
+    }
+
     header .hamburger-menu {
         width: 1.35rem;
         height: 1.15rem;
@@ -438,7 +465,56 @@ header nav a:hover, header nav a.active {
 
 
 
-/* Hamburger Menu */
+/* Hamburger Menu & Mobile Header Actions */
+.header-mobile-actions {
+    display: none;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+.mobile-add-game {
+    display: none;
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.mobile-add-game:focus,
+.mobile-add-game:hover {
+    outline: none;
+    text-decoration: none;
+}
+
+.mobile-add-game span {
+    position: absolute;
+    background: #333;
+    border-radius: 10px;
+    transition: all 0.3s linear;
+}
+
+.mobile-add-game span:first-child {
+    width: 100%;
+    height: 0.25rem;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+
+.mobile-add-game span:last-child {
+    width: 0.25rem;
+    height: 100%;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+}
 .hamburger-menu {
     display: none; /* Hidden by default */
     flex-direction: column;

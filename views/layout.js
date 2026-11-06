@@ -161,11 +161,22 @@ const Header = ({ isAuthenticated, isParticipating, isAdmin }) => {
                 </a>
             </div>
             
-            <button class="hamburger-menu" aria-label="Open navigation menu">
+            <div class="header-mobile-actions">
+                ${isAuthenticated && isParticipating
+                    ? html`
+                        <a href="/log-game" class="mobile-add-game" aria-label="Record New Game" title="Record New Game">
+                            <span></span>
+                            <span></span>
+                        </a>
+                    `
+                    : ''}
+                <button class="hamburger-menu" aria-label="Open navigation menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
+
+            </div>
 
             ${isAuthenticated ? authenticatedNav : unauthenticatedNav}
         </header>

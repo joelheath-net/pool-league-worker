@@ -49,6 +49,8 @@ export const MobileStyles = ({ cutoff = "500px" } = {}) => {
                 color: #ffffff;
             }
 
+            header.is-mobile-nav .header-mobile-actions,
+            header.is-mobile-nav .mobile-add-game,
             header.is-mobile-nav .hamburger-menu {
                 display: flex;
             }
@@ -100,6 +102,8 @@ export const MobileStyles = ({ cutoff = "500px" } = {}) => {
                     color: #ffffff;
                 }
 
+                header .header-mobile-actions,
+                header .mobile-add-game,
                 header .hamburger-menu {
                     display: flex;
                 }
