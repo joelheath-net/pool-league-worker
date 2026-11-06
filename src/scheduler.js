@@ -4,11 +4,16 @@
  * Rules:
  * 1. Only participating players are included. Friendly matches with non-participating players
  *    are excluded from the league schedule and game counts.
- * 2. Whoever has played the least games is highest priority. Players with the most games
- *    should not play until other players have caught up (min max(C[u], C[v])).
- * 3. Initial matchups (round 0) take precedence over rematches (round 1, 2...) when
- *    games played counts are balanced.
- * 4. Lazy evaluation returns at most `limit` games (default 50) efficiently, even for very
+ * 2. When `prioritiseFirstMatchups` is true (default), lowest rematch round (r) takes highest
+ *    priority so all first matchups are completed before any second matchups begin. Within the
+ *    same rematch round, players with the fewest games played take priority
+ *    (min max(C[u], C[v]), then min (C[u] + C[v])).
+ * 3. When `prioritiseFirstMatchups` is false, whoever has played the least games is highest
+ *    priority above all (min max(C[u], C[v]), then min (C[u] + C[v]), then min r).
+ * 4. When `availablePlayerIds` is provided, only matchups between available players are scheduled,
+ *    and the simulation dynamically reschedules around available players while preserving
+ *    historical game counts from all participating players.
+ * 5. Lazy evaluation returns at most `limit` games (default 50) efficiently, even for very
  *    large rematch rounds (k).
  *
  * @param {Object} options
@@ -16,9 +21,18 @@
  * @param {Array} options.games List of game objects from match history
  * @param {number|string} [options.rematchRounds=2] Number of times each pair should play
  * @param {number} [options.limit=50] Maximum number of games to return
- * @returns {Object} { games, totalOutstanding, rematchRounds, participatingCount, limit }
+ * @param {boolean} [options.prioritiseFirstMatchups=true] Whether to prioritise lowest rematch round first
+ * @param {Array<string>|Set<string>|null} [options.availablePlayerIds=null] Optional subset of available player IDs
+ * @returns {Object} { games, totalOutstanding, rematchRounds, participatingCount, availableCount, prioritiseFirstMatchups, players, limit }
  */
-export function calculateOutstandingGames({ users = [], games = [], rematchRounds = 2, limit = 50 } = {}) {
+export function calculateOutstandingGames({
+    users = [],
+    games = [],
+    rematchRounds = 2,
+    limit = 50,
+    prioritiseFirstMatchups = true,
+    availablePlayerIds = null
+} = {}) {
     const k = typeof rematchRounds === 'number'
         ? rematchRounds
         : (/^[1-9]\d*$/.test(String(rematchRounds)) ? Number(rematchRounds) : NaN);
@@ -37,12 +51,33 @@ export function calculateOutstandingGames({ users = [], games = [], rematchRound
         throw new Error('Too many participating players to calculate fixtures (maximum 99).');
     }
 
-    if (n < 2) {
+    const prioritiseFirst = Boolean(prioritiseFirstMatchups);
+    const hasAvailabilityFilter = availablePlayerIds !== null && availablePlayerIds !== undefined;
+    const rawAvailableSet = hasAvailabilityFilter ? new Set(availablePlayerIds) : null;
+    const availableUsers = hasAvailabilityFilter
+        ? participatingUsers.filter(u => rawAvailableSet.has(u.id))
+        : participatingUsers;
+    const availableSet = new Set(availableUsers.map(u => u.id));
+    const availableCount = availableUsers.length;
+
+    const players = [...participatingUsers]
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '') || a.id.localeCompare(b.id))
+        .map(u => ({
+            id: u.id,
+            name: u.name,
+            team: u.team,
+            teamColor: u.teamColor
+        }));
+
+    if (n < 2 || availableCount < 2) {
         return {
             games: [],
             totalOutstanding: 0,
             rematchRounds: k,
             participatingCount: n,
+            availableCount,
+            prioritiseFirstMatchups: prioritiseFirst,
+            players,
             limit
         };
     }
@@ -79,17 +114,25 @@ export function calculateOutstandingGames({ users = [], games = [], rematchRound
         }
     }
 
-    // Generate all pairs and determine outstanding matches
+    // Generate all available pairs and determine outstanding matches
     let totalOutstanding = 0;
     const activePairs = [];
 
-    // Sort participating users deterministically
+    // Sort participating users deterministically by ID so p1 < p2 matches canonical pairKey
     const sortedUsers = [...participatingUsers].sort((a, b) => a.id.localeCompare(b.id));
 
     for (let i = 0; i < sortedUsers.length; i++) {
+        const p1 = sortedUsers[i].id;
+        if (!availableSet.has(p1)) {
+            continue;
+        }
+
         for (let j = i + 1; j < sortedUsers.length; j++) {
-            const p1 = sortedUsers[i].id;
             const p2 = sortedUsers[j].id;
+            if (!availableSet.has(p2)) {
+                continue;
+            }
+
             const pairKey = `${p1}:${p2}`;
             const playedSet = playedRematches.get(pairKey) || new Set();
 
@@ -144,14 +187,9 @@ export function calculateOutstandingGames({ users = [], games = [], rematchRound
             const sumGames = p1Count + p2Count;
             const r = pair.nextRematch;
 
-            // Comparison criteria:
-            // 1. Min maxGames (least games played takes priority; don't let most active play further)
-            // 2. Min sumGames (both players having fewer games)
-            // 3. Min r (earlier rounds / first matches take priority over rematches)
-            // 4. tieKey (deterministic ordering)
             const currentKey = { maxGames, sumGames, r, tieKey: pair.tieKey };
 
-            if (bestIndex === -1 || compareKeys(currentKey, bestKey) < 0) {
+            if (bestIndex === -1 || compareKeys(currentKey, bestKey, prioritiseFirst) < 0) {
                 bestIndex = i;
                 bestKey = currentKey;
             }
@@ -205,11 +243,20 @@ export function calculateOutstandingGames({ users = [], games = [], rematchRound
         totalOutstanding,
         rematchRounds: k,
         participatingCount: n,
+        availableCount,
+        prioritiseFirstMatchups: prioritiseFirst,
+        players,
         limit
     };
 }
 
-function compareKeys(a, b) {
+function compareKeys(a, b, prioritiseFirstMatchups = true) {
+    if (prioritiseFirstMatchups) {
+        if (a.r !== b.r) return a.r - b.r;
+        if (a.maxGames !== b.maxGames) return a.maxGames - b.maxGames;
+        if (a.sumGames !== b.sumGames) return a.sumGames - b.sumGames;
+        return a.tieKey.localeCompare(b.tieKey);
+    }
     if (a.maxGames !== b.maxGames) return a.maxGames - b.maxGames;
     if (a.sumGames !== b.sumGames) return a.sumGames - b.sumGames;
     if (a.r !== b.r) return a.r - b.r;

@@ -137,9 +137,12 @@ web.get('/game-list', (c) => {
 web.get('/outstanding-games', (c) => {
     const roundsParam = c.req.query('rounds');
     const rounds = roundsParam ? parseInt(roundsParam, 10) : 2;
+    const prioritiseParam = c.req.query('prioritiseFirstMatchups');
+    const prioritiseFirstMatchups = prioritiseParam !== 'false' && prioritiseParam !== '0';
     return c.render(
         <OutstandingGamesPage
             rounds={isNaN(rounds) || rounds < 1 ? 2 : rounds}
+            prioritiseFirstMatchups={prioritiseFirstMatchups}
             isParticipating={c.get('isParticipating')}
         />,
         {

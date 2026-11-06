@@ -40,16 +40,48 @@ publicApi.get('/outstanding-games', async (c) => {
         }
     }
 
+    const prioritiseParam = c.req.query('prioritiseFirstMatchups');
+    let prioritiseFirstMatchups = true;
+    if (prioritiseParam !== undefined) {
+        if (prioritiseParam === 'true' || prioritiseParam === '1') {
+            prioritiseFirstMatchups = true;
+        } else if (prioritiseParam === 'false' || prioritiseParam === '0') {
+            prioritiseFirstMatchups = false;
+        } else {
+            return c.json({ message: 'Invalid prioritiseFirstMatchups parameter.' }, 400);
+        }
+    }
+
     try {
         const [users, games] = await Promise.all([
             db.getUsers(c.env.DB, { participatingOnly: true }),
             db.getGameList(c.env.DB)
         ]);
 
+        let availablePlayerIds = null;
+        if (c.req.query('available') !== undefined) {
+            const rawAvailable = c.req.queries('available') || [];
+            availablePlayerIds = rawAvailable
+                .flatMap((val) => String(val).split(','))
+                .map((s) => s.trim())
+                .filter(Boolean);
+        } else if (c.req.query('unavailable') !== undefined) {
+            const rawUnavailable = c.req.queries('unavailable') || [];
+            const unavailableSet = new Set(
+                rawUnavailable
+                    .flatMap((val) => String(val).split(','))
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+            );
+            availablePlayerIds = users.filter((u) => !unavailableSet.has(u.id)).map((u) => u.id);
+        }
+
         const result = calculateOutstandingGames({
             users,
             games,
             rematchRounds,
+            prioritiseFirstMatchups,
+            availablePlayerIds,
             limit: 50
         });
 
