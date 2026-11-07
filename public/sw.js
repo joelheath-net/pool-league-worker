@@ -6,6 +6,8 @@ const PRECACHE_ASSETS = [
     '/js/main.js',
     '/images/android-chrome-192x192.png',
     '/images/android-chrome-512x512.png',
+    '/images/icon-192x192-monochrome.png',
+    '/images/icon-96x96-monochrome.png',
     '/images/apple-touch-icon.png',
     '/images/favicon-32x32.png',
     '/images/favicon-16x16.png'
@@ -123,7 +125,7 @@ self.addEventListener('push', (event) => {
     const options = {
         body: payload.body || 'Your leaderboard ranking has changed!',
         icon: '/images/android-chrome-192x192.png',
-        badge: '/images/favicon-32x32.png',
+        badge: '/images/icon-96x96-monochrome.png',
         tag: 'leaderboard-rank-change',
         renotify: true,
         data: {
