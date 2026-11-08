@@ -780,4 +780,74 @@ describe('JWT, Roles & Auth Security', () => {
         );
         expect(adminCheck.status).toBe(200);
     });
+
+    it('SUPPORTS return_to redirect for the mobile worker while keeping / for main site and blocking untrusted domains', async () => {
+        const idTokenFromGoogleTokenEndpoint = await sign(
+            {
+                iss: 'https://accounts.google.com',
+                aud: baseEnv.GOOGLE_CLIENT_ID,
+                sub: 'admin-google-sub-123',
+                email: 'admin@example.com',
+                email_verified: true,
+                name: 'Joel',
+                exp: Math.floor(Date.now() / 1000) + 3600
+            },
+            'google-token-endpoint-mock-sig',
+            'HS256'
+        );
+
+        globalThis.fetch = vi.fn(async (url) => {
+            if (String(url) === 'https://oauth2.googleapis.com/token') {
+                return new Response(
+                    JSON.stringify({
+                        access_token: 'google-access-token',
+                        refresh_token: 'google-refresh-token',
+                        expires_in: 3600,
+                        id_token: idTokenFromGoogleTokenEndpoint
+                    }),
+                    { status: 200, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+            throw new Error(`Unexpected fetch to ${url}`);
+        });
+
+        // 1. Mobile login with valid return_to
+        const mobileReturnTo = 'https://mobile.stpaulsleague.joelheath.net/auth/token-callback';
+        const loginRes = await fullApp.request(
+            `https://stpaulsleague.joelheath.net/auth/google/login?return_to=${encodeURIComponent(mobileReturnTo)}`,
+            {},
+            baseEnv
+        );
+        expect(loginRes.status).toBe(302);
+        const state = new URL(loginRes.headers.get('location')).searchParams.get('state');
+
+        const callbackRes = await fullApp.request(
+            `https://stpaulsleague.joelheath.net/auth/google/callback?code=auth-code&state=${state}`,
+            {
+                headers: {
+                    Cookie: `oauth_state=${state}; oauth_return_to=${encodeURIComponent(mobileReturnTo)}`
+                }
+            },
+            baseEnv
+        );
+        expect(callbackRes.status).toBe(302);
+        const redirectUrl = new URL(callbackRes.headers.get('location'));
+        expect(redirectUrl.origin).toBe('https://mobile.stpaulsleague.joelheath.net');
+        expect(redirectUrl.pathname).toBe('/auth/token-callback');
+        expect(redirectUrl.searchParams.get('token')).toMatch(/^eyJ/);
+
+        // 2. Untrusted return_to domain is rejected and falls back to /
+        const evilReturnTo = 'https://evil-attacker.example.com/auth/token-callback';
+        const evilCallbackRes = await fullApp.request(
+            `https://stpaulsleague.joelheath.net/auth/google/callback?code=auth-code&state=${state}`,
+            {
+                headers: {
+                    Cookie: `oauth_state=${state}; oauth_return_to=${encodeURIComponent(evilReturnTo)}`
+                }
+            },
+            baseEnv
+        );
+        expect(evilCallbackRes.status).toBe(302);
+        expect(evilCallbackRes.headers.get('location')).toBe('/');
+    });
 });

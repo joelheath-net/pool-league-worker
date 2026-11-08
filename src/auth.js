@@ -11,6 +11,53 @@ import {
 
 const auth = new Hono();
 
+export function isValidReturnToUrl(rawUrl, env = {}) {
+    if (!rawUrl || typeof rawUrl !== 'string') return false;
+    let parsed;
+    try {
+        parsed = new URL(rawUrl);
+    } catch {
+        return false;
+    }
+
+    if (parsed.pathname !== '/auth/token-callback') {
+        return false;
+    }
+
+    const host = parsed.hostname.toLowerCase();
+
+    // Allow localhost / loopback during local development
+    if (host === 'localhost' || host === '127.0.0.1') {
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    }
+
+    if (parsed.protocol !== 'https:') {
+        return false;
+    }
+
+    // Allow official subdomains and Cloudflare Workers domains
+    if (
+        host === 'joelheath.net' ||
+        host.endsWith('.joelheath.net') ||
+        host.endsWith('.workers.dev')
+    ) {
+        return true;
+    }
+
+    // Optional comma-separated list of custom origins for self-hosted deployments
+    if (env?.ALLOWED_AUTH_ORIGINS) {
+        const allowed = String(env.ALLOWED_AUTH_ORIGINS)
+            .split(',')
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean);
+        if (allowed.includes(parsed.origin.toLowerCase()) || allowed.includes(host)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Route to start the OAuth flow
 auth.get('/google/login', (c) => {
     const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -26,6 +73,19 @@ auth.get('/google/login', (c) => {
         maxAge: 60 * 10, // 10 minutes
         sameSite: 'Lax'
     });
+
+    const requestedReturnTo = c.req.query('return_to');
+    if (requestedReturnTo && isValidReturnToUrl(requestedReturnTo, c.env)) {
+        setCookie(c, 'oauth_return_to', requestedReturnTo, {
+            path: '/',
+            secure: currentUrl.protocol === 'https:',
+            httpOnly: true,
+            maxAge: 60 * 10, // 10 minutes
+            sameSite: 'Lax'
+        });
+    } else if (c.req.query('prompt') !== 'consent') {
+        deleteCookie(c, 'oauth_return_to', { path: '/' });
+    }
 
     googleAuthUrl.searchParams.set('client_id', c.env.GOOGLE_CLIENT_ID);
     googleAuthUrl.searchParams.set('redirect_uri', redirectUri);
@@ -102,6 +162,11 @@ auth.get('/google/callback', async (c) => {
         const isWhitelisted = idTokenPayload.email && await isEmailWhitelisted(c.env.DB, idTokenPayload.email);
         if (!isWhitelisted) {
             console.warn(`[AUTH] Login rejected: ${idTokenPayload.email} is not whitelisted`);
+            const savedReturnTo = getCookie(c, 'oauth_return_to');
+            deleteCookie(c, 'oauth_return_to', { path: '/' });
+            if (savedReturnTo && isValidReturnToUrl(savedReturnTo, c.env)) {
+                return c.redirect(new URL('/', savedReturnTo).toString());
+            }
             return c.redirect('/');
         }
 
@@ -123,6 +188,15 @@ auth.get('/google/callback', async (c) => {
             maxAge: refreshTokenExpiresIn,
             sameSite: 'Lax'
         });
+
+        const savedReturnTo = getCookie(c, 'oauth_return_to');
+        deleteCookie(c, 'oauth_return_to', { path: '/' });
+
+        if (savedReturnTo && isValidReturnToUrl(savedReturnTo, c.env)) {
+            const returnUrl = new URL(savedReturnTo);
+            returnUrl.searchParams.set('token', jwt);
+            return c.redirect(returnUrl.toString());
+        }
 
         return c.redirect('/');
     } catch (error) {
