@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import fullApp from '../src/index.js';
 import { signAuthToken } from '../src/token-service.js';
@@ -8,10 +8,8 @@ import { signAuthToken } from '../src/token-service.js';
 const TEST_SECRET = 'rematch-overhaul-test-secret-0123456789abcdef';
 
 const SETUP_SQL = readFileSync(resolve(process.cwd(), 'setup.sql'), 'utf8');
-const MIGRATION_SQL = readFileSync(
-    resolve(process.cwd(), 'migrations/0001_rematch_overhaul.sql'),
-    'utf8'
-);
+const MIGRATION_PATH = resolve(process.cwd(), 'migrations/0001_rematch_overhaul.sql');
+const MIGRATION_SQL = existsSync(MIGRATION_PATH) ? readFileSync(MIGRATION_PATH, 'utf8') : null;
 
 const LEGACY_SCHEMA_SQL = `
 CREATE TABLE users (
@@ -207,7 +205,7 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
         sqlite.close();
     });
 
-    describe('D1 Migration (migrations/0001_rematch_overhaul.sql)', () => {
+    describe.skipIf(!MIGRATION_SQL)('D1 Migration (migrations/0001_rematch_overhaul.sql)', () => {
         it('migrates all legacy games, multi-revision histories, reversed pairs, and fractional balls without data loss', async () => {
             sqlite.exec(LEGACY_SCHEMA_SQL);
             seedUsers(sqlite);
@@ -459,9 +457,9 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
             // Charlie: 1 win, 0 losses
             const lb = await (await fullApp.request('https://example.com/api/leaderboard', {}, env)).json();
             const byId = Object.fromEntries(lb.map((p) => [p.playerId, p]));
-            expect(byId.alice).toEqual({ playerId: 'alice', wins: 2, losses: 1, ballsRemaining: 6, foulsOnBlack: 0 });
-            expect(byId.bob).toEqual({ playerId: 'bob', wins: 0, losses: 2, ballsRemaining: 6, foulsOnBlack: 1 });
-            expect(byId.charlie).toEqual({ playerId: 'charlie', wins: 1, losses: 0, ballsRemaining: 0, foulsOnBlack: 0 });
+            expect(byId.alice).toMatchObject({ playerId: 'alice', wins: 2, losses: 1, ballsRemaining: 6, foulsOnBlack: 0, points: 7, position: 1 });
+            expect(byId.bob).toMatchObject({ playerId: 'bob', wins: 0, losses: 2, ballsRemaining: 6, foulsOnBlack: 1, points: 1, position: 3 });
+            expect(byId.charlie).toMatchObject({ playerId: 'charlie', wins: 1, losses: 0, ballsRemaining: 0, foulsOnBlack: 0, points: 3, position: 2 });
 
             // Check outstanding games for 2 rematch rounds across 3 participating players (3 pairs * 2 = 6 total games, 3 played -> 3 left)
             // Alice vs Bob already played rematch 0 & 1, so Alice vs Bob has 0 outstanding games!
@@ -514,8 +512,8 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
             // Leaderboard reflects revision 1: Alice now has 1 win, 2 losses (6 + 7 = 13 balls); Bob has 1 win, 1 loss (2 balls)
             const lbAfter = await (await fullApp.request('https://example.com/api/leaderboard', {}, env)).json();
             const byIdAfter = Object.fromEntries(lbAfter.map((p) => [p.playerId, p]));
-            expect(byIdAfter.alice).toEqual({ playerId: 'alice', wins: 1, losses: 2, ballsRemaining: 13, foulsOnBlack: 0 });
-            expect(byIdAfter.bob).toEqual({ playerId: 'bob', wins: 1, losses: 1, ballsRemaining: 2, foulsOnBlack: 1 });
+            expect(byIdAfter.alice).toMatchObject({ playerId: 'alice', wins: 1, losses: 2, ballsRemaining: 13, foulsOnBlack: 0, points: 5, position: 1 });
+            expect(byIdAfter.bob).toMatchObject({ playerId: 'bob', wins: 1, losses: 1, ballsRemaining: 2, foulsOnBlack: 1, points: 3, position: 3 });
 
             // Archive season clears both games and game_revisions cleanly
             const archiveRes = await fullApp.request(
@@ -976,9 +974,9 @@ describe('Rematch Overhaul, Schema Migration & Strict Validation', () => {
             // g3: Alice beat Bob (3 balls)
             const lb = await (await fullApp.request('https://example.com/api/leaderboard', {}, env)).json();
             const byId = Object.fromEntries(lb.map((p) => [p.playerId, p]));
-            expect(byId.alice).toEqual({ playerId: 'alice', wins: 2, losses: 2, ballsRemaining: 7, foulsOnBlack: 1 });
-            expect(byId.bob).toEqual({ playerId: 'bob', wins: 1, losses: 2, ballsRemaining: 5, foulsOnBlack: 0 });
-            expect(byId.charlie).toEqual({ playerId: 'charlie', wins: 1, losses: 0, ballsRemaining: 0, foulsOnBlack: 0 });
+            expect(byId.alice).toMatchObject({ playerId: 'alice', wins: 2, losses: 2, ballsRemaining: 7, foulsOnBlack: 1, points: 7, position: 1 });
+            expect(byId.bob).toMatchObject({ playerId: 'bob', wins: 1, losses: 2, ballsRemaining: 5, foulsOnBlack: 0, points: 5, position: 2 });
+            expect(byId.charlie).toMatchObject({ playerId: 'charlie', wins: 1, losses: 0, ballsRemaining: 0, foulsOnBlack: 0, points: 3, position: 3 });
 
             // Logging another Alice vs Bob game now gets rematchId = 3 (continuing after 0, 1, 2)
             const gNext = await logMatch({

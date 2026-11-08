@@ -372,11 +372,186 @@ export const deleteGame = async (db, gameId, { authorId }) => {
     return { deleted: (markDeletedResult?.meta?.changes ?? 0) > 0 };
 };
 
-export const getLeaderboardStats = async (db) => {
-    const games = await getGameList(db);
+// --- Leaderboard Ranking Single Source of Truth ---
 
-    const { results } = await db.prepare('SELECT id FROM users WHERE participating = 1').all();
-    const players = new Map(results.map(p => [p.id, { wins: 0, losses: 0, ballsRemaining: 0, foulsOnBlack: 0 }]));
+/**
+ * Resolves a group of players who are tied on overall (points, ballsRemaining)
+ * into an ordered list of buckets using Premier League-style Head-to-Head points
+ * (points gained only in matches played between the tied players).
+ * Players remaining in the same bucket are completely tied and share the same position.
+ */
+const resolveHeadToHeadBuckets = (tiedGroup, games = []) => {
+    if (tiedGroup.length <= 1) {
+        return [tiedGroup];
+    }
+
+    const groupIds = new Set(tiedGroup.map((p) => p.playerId));
+    const h2hPointsMap = new Map(tiedGroup.map((p) => [p.playerId, 0]));
+
+    for (const game of games) {
+        const { homePlayerId, awayPlayerId, winnerHome, fouledOnBlack } = game;
+        if (!groupIds.has(homePlayerId) || !groupIds.has(awayPlayerId)) {
+            continue;
+        }
+
+        const winnerId = winnerHome ? homePlayerId : awayPlayerId;
+        const loserId = winnerHome ? awayPlayerId : homePlayerId;
+
+        h2hPointsMap.set(winnerId, h2hPointsMap.get(winnerId) + 3);
+        if (!fouledOnBlack) {
+            h2hPointsMap.set(loserId, h2hPointsMap.get(loserId) + 1);
+        }
+    }
+
+    const byH2H = new Map();
+    for (const player of tiedGroup) {
+        const pts = h2hPointsMap.get(player.playerId) || 0;
+        if (!byH2H.has(pts)) {
+            byH2H.set(pts, []);
+        }
+        byH2H.get(pts).push(player);
+    }
+
+    const sortedH2HValues = Array.from(byH2H.keys()).sort((a, b) => b - a);
+
+    // If all players in this tied group gained the exact same H2H points, they share the same rank
+    if (sortedH2HValues.length === 1) {
+        const bucket = [...byH2H.get(sortedH2HValues[0])];
+        bucket.sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '') ||
+            (a.team || '').localeCompare(b.team || '') ||
+            String(a.playerId).localeCompare(String(b.playerId))
+        );
+        return [bucket];
+    }
+
+    // H2H points separated the group; recursively resolve any subgroup that still has 2+ tied players
+    const resolvedBuckets = [];
+    for (const h2hVal of sortedH2HValues) {
+        const subGroup = byH2H.get(h2hVal);
+        if (subGroup.length > 1) {
+            resolvedBuckets.push(...resolveHeadToHeadBuckets(subGroup, games));
+        } else {
+            resolvedBuckets.push(subGroup);
+        }
+    }
+
+    return resolvedBuckets;
+};
+
+/**
+ * Single source of truth for computing derived stats, sorting players, and assigning
+ * dense league positions (1, 2, 2, 3...) according to official league rules:
+ * 1. Points descending (wins * 3 + losses - foulsOnBlack)
+ * 2. Ball difference (ballsRemaining) ascending
+ * 3. Head-to-head points descending (points gained in matches between tied players)
+ * 4. Shared position if still tied
+ */
+export const rankLeaderboardPlayers = (playersList, games = []) => {
+    if (!Array.isArray(playersList) || playersList.length === 0) {
+        return [];
+    }
+
+    const enriched = playersList.map((player) => {
+        const wins = Number(player.wins) || 0;
+        const losses = Number(player.losses) || 0;
+        const ballsRemaining = Number(player.ballsRemaining) || 0;
+        const foulsOnBlack = Number(player.foulsOnBlack) || 0;
+        const points = player.points !== undefined
+            ? Number(player.points)
+            : wins * 3 + losses - foulsOnBlack;
+        const played = wins + losses;
+        const winLossRatio = losses > 0
+            ? (wins / losses).toFixed(2)
+            : (wins > 0 ? '∞' : '0.00');
+        const ratioNumeric = losses > 0
+            ? (wins / losses)
+            : (wins > 0 ? Infinity : 0);
+
+        return {
+            ...player,
+            wins,
+            losses,
+            ballsRemaining,
+            foulsOnBlack,
+            points,
+            played,
+            winLossRatio,
+            ratioNumeric
+        };
+    });
+
+    // Primary sort: Points DESC, then Ball Difference (ballsRemaining) ASC
+    enriched.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return a.ballsRemaining - b.ballsRemaining;
+    });
+
+    // Partition into groups tied on both points and ballsRemaining
+    const primaryGroups = [];
+    for (const player of enriched) {
+        const lastGroup = primaryGroups[primaryGroups.length - 1];
+        if (
+            lastGroup &&
+            lastGroup[0].points === player.points &&
+            lastGroup[0].ballsRemaining === player.ballsRemaining
+        ) {
+            lastGroup.push(player);
+        } else {
+            primaryGroups.push([player]);
+        }
+    }
+
+    // Resolve each primary group into final rank buckets via Head-to-Head points
+    const finalBuckets = [];
+    for (const group of primaryGroups) {
+        if (group.length === 1) {
+            finalBuckets.push(group);
+        } else {
+            finalBuckets.push(...resolveHeadToHeadBuckets(group, games));
+        }
+    }
+
+    // Assign dense position (1, 2, 2, 3...) per bucket
+    const rankedLeaderboard = [];
+    finalBuckets.forEach((bucket, index) => {
+        const position = index + 1;
+        for (const player of bucket) {
+            rankedLeaderboard.push({
+                ...player,
+                position
+            });
+        }
+    });
+
+    return rankedLeaderboard;
+};
+
+export const getLeaderboardStats = async (db) => {
+    const [games, { results }] = await Promise.all([
+        getGameList(db),
+        db.prepare('SELECT id, name, team, team_color, participating FROM users WHERE participating = 1').all()
+    ]);
+
+    const users = keysToCamel(results || []);
+    const players = new Map(
+        users.map((u) => [
+            u.id,
+            {
+                playerId: u.id,
+                name: u.name,
+                team: u.team,
+                teamColor: u.teamColor || '#ffffff',
+                participating: Boolean(u.participating),
+                wins: 0,
+                losses: 0,
+                ballsRemaining: 0,
+                foulsOnBlack: 0
+            }
+        ])
+    );
+
+    const participatingGames = [];
 
     for (const game of games) {
         const { homePlayerId, awayPlayerId, winnerHome, ballsRemaining, fouledOnBlack } = game;
@@ -386,17 +561,18 @@ export const getLeaderboardStats = async (db) => {
             continue;
         }
 
+        participatingGames.push(game);
+
         const winner = winnerHome ? homePlayerId : awayPlayerId;
         const loser = winnerHome ? awayPlayerId : homePlayerId;
 
-        if (players.has(winner)) players.get(winner).wins++;
-        if (players.has(loser)) {
-            players.get(loser).losses++;
-            players.get(loser).ballsRemaining += ballsRemaining;
-            if (fouledOnBlack) players.get(loser).foulsOnBlack++;
-        }
+        players.get(winner).wins++;
+        players.get(loser).losses++;
+        players.get(loser).ballsRemaining += ballsRemaining;
+        if (fouledOnBlack) players.get(loser).foulsOnBlack++;
     }
-    return Array.from(players.entries()).map(([playerId, stats]) => ({ playerId, ...stats }));
+
+    return rankLeaderboardPlayers(Array.from(players.values()), participatingGames);
 };
 
 
@@ -473,7 +649,7 @@ export const getArchivedLeaderboard = async (db, seasonId) => {
         FROM archived_tables a
         WHERE a.season_id = ?`
     ).bind(seasonId).all();
-    return keysToCamel(results);
+    return rankLeaderboardPlayers(keysToCamel(results), []);
 };
 
 export const getArchivedSeasonInfo = async (db, seasonId) => {
@@ -504,7 +680,6 @@ export const getAllTimeLeaderboardStats = async (db) => {
             losses: 0,
             foulsOnBlack: 0,
             ballsRemaining: 0,
-            points: 0,
         });
     }
 
@@ -537,7 +712,6 @@ export const getAllTimeLeaderboardStats = async (db) => {
                 losses: 0,
                 foulsOnBlack: 0,
                 ballsRemaining: 0,
-                points: 0,
             });
         }
         const player = players.get(row.playerId);
@@ -572,7 +746,6 @@ export const getAllTimeLeaderboardStats = async (db) => {
                 losses: 0,
                 foulsOnBlack: 0,
                 ballsRemaining: 0,
-                points: 0,
             });
         }
         if (!players.has(loser)) {
@@ -586,7 +759,6 @@ export const getAllTimeLeaderboardStats = async (db) => {
                 losses: 0,
                 foulsOnBlack: 0,
                 ballsRemaining: 0,
-                points: 0,
             });
         }
 
@@ -598,95 +770,35 @@ export const getAllTimeLeaderboardStats = async (db) => {
         }
     }
 
-    // 4. Calculate points, played, and win/loss ratio for each player
-    const leaderboard = Array.from(players.values()).map(player => {
-        const points = player.wins * 3 + player.losses - player.foulsOnBlack;
-        const played = player.wins + player.losses;
-        const winLossRatio = player.losses > 0
-            ? (player.wins / player.losses).toFixed(2)
-            : (player.wins > 0 ? "∞" : "0.00");
-        const ratioNumeric = player.losses > 0
-            ? (player.wins / player.losses)
-            : (player.wins > 0 ? Infinity : 0);
-
-        return {
-            ...player,
-            points,
-            played,
-            winLossRatio,
-            ratioNumeric,
-        };
-    });
-
-    // 5. Default sort: points descending, ballsRemaining ascending, foulsOnBlack ascending
-    leaderboard.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (a.ballsRemaining !== b.ballsRemaining) return a.ballsRemaining - b.ballsRemaining;
-        return a.foulsOnBlack - b.foulsOnBlack;
-    });
-
-    return leaderboard;
+    // 4. Rank and enrich using the single-source-of-truth ranking logic
+    return rankLeaderboardPlayers(Array.from(players.values()), games);
 };
 
 
 export const archiveSeason = async (db, seasonName) => {
-    // 1. Get the current leaderboard stats
+    // 1. Get the current ranked leaderboard stats (already includes name, team, teamColor, points, position)
     const leaderboardStats = await getLeaderboardStats(db);
     if (leaderboardStats.length === 0) {
         throw new Error("Cannot archive an empty season.");
     }
 
-    const playerIds = leaderboardStats.map(({ playerId }) => playerId);
-    const usersById = new Map();
-
-    if (playerIds.length > 0) {
-        const placeholders = playerIds.map(() => '?').join(', ');
-        const { results } = await db.prepare(`
-            SELECT id, name, team, team_color
-            FROM users
-            WHERE id IN (${placeholders})`
-        ).bind(...playerIds).all();
-
-        for (const user of keysToCamel(results)) {
-            usersById.set(user.id, user);
-        }
-    }
-
-    // 2. Process stats to calculate points and freeze the player identity snapshot
-    const processedStats = leaderboardStats.map(playerStats => {
-        const points = playerStats.wins * 3 + playerStats.losses - playerStats.foulsOnBlack;
-        const user = usersById.get(playerStats.playerId) || {
-            name: 'Unknown Player',
-            team: 'My Team',
-            teamColor: '#ffffff'
-        };
-
-        return {
-            ...playerStats,
-            name: user.name,
-            team: user.team,
-            teamColor: user.teamColor,
-            points
-        };
-    });
-
-    // 3. Create a new season entry and get its ID
+    // 2. Create a new season entry and get its ID
     const seasonId = (await db.prepare(
             'INSERT INTO archived_seasons (name) VALUES (?)'
         ).bind(seasonName).run())
         .meta.last_row_id;
 
-    // 4. Prepare statements to insert leaderboard data
-    const insertStatements = processedStats.map(stats => {
+    // 3. Prepare statements to insert leaderboard data
+    const insertStatements = leaderboardStats.map(stats => {
         return db.prepare(`
             INSERT INTO archived_tables (season_id, player_id, name, team, team_color, points, wins, losses, fouls_on_black, balls_remaining)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             seasonId,
             stats.playerId,
-            stats.name,
-            stats.team,
-            stats.teamColor,
+            stats.name || 'Unknown Player',
+            stats.team || 'My Team',
+            stats.teamColor || '#ffffff',
             stats.points,
             stats.wins,
             stats.losses,

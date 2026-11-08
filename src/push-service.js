@@ -6,39 +6,24 @@ import {
 } from './database.js';
 
 /**
- * Calculates the current ranking position (1-indexed) for each participating player.
- * Uses identical ranking criteria as the official leaderboard:
+ * Retrieves the current ranking position (1-indexed dense rank) for each participating player
+ * from the backend leaderboard single source of truth:
  * 1. Points descending (wins * 3 + losses - foulsOnBlack)
  * 2. Balls remaining ascending (tie-breaker)
- * 3. Fouls on black ascending (tie-breaker)
+ * 3. Head-to-head points descending (points gained in matches between tied players)
+ * 4. Shared position if still tied
  *
  * @param {D1Database} db
- * @returns {Promise<Record<string, number>>} Map of playerId -> rank (1, 2, 3...)
+ * @returns {Promise<Record<string, number>>} Map of playerId -> position (1, 2, 2, 3...)
  */
 export const getLeaderboardRanks = async (db) => {
     const stats = await getLeaderboardStats(db);
     if (!stats || stats.length === 0) return {};
 
-    const players = stats.map((player) => {
-        const points = player.wins * 3 + player.losses - player.foulsOnBlack;
-        return {
-            playerId: player.playerId,
-            points,
-            ballsRemaining: player.ballsRemaining,
-            foulsOnBlack: player.foulsOnBlack
-        };
-    });
-
-    players.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (a.ballsRemaining !== b.ballsRemaining) return a.ballsRemaining - b.ballsRemaining;
-        return a.foulsOnBlack - b.foulsOnBlack;
-    });
-
     const ranks = {};
-    players.forEach((p, index) => {
-        ranks[p.playerId] = index + 1;
-    });
+    for (const player of stats) {
+        ranks[player.playerId] = player.position;
+    }
 
     return ranks;
 };

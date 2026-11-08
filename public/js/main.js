@@ -223,17 +223,12 @@ function sortLeaderboardData(data, field, direction) {
     const isAsc = direction === 'asc';
     const mult = isAsc ? 1 : -1;
 
-    return [...data].sort((a, b) => {
-        if (field === 'points') {
-            if (a.points !== b.points) {
-                return (a.points - b.points) * mult;
-            }
-            if (a.ballsRemaining !== b.ballsRemaining) {
-                return a.ballsRemaining - b.ballsRemaining;
-            }
-            return a.foulsOnBlack - b.foulsOnBlack;
-        }
+    // Default league ranking is already computed and sorted by the API single source of truth
+    if (field === 'points') {
+        return isAsc ? [...data].reverse() : [...data];
+    }
 
+    return [...data].sort((a, b) => {
         if (field === 'winLossRatio') {
             const aRatio = getWinLossRatio(a);
             const bRatio = getWinLossRatio(b);
@@ -247,48 +242,14 @@ function sortLeaderboardData(data, field, direction) {
             if (a.wins !== b.wins) {
                 return (a.wins - b.wins) * mult;
             }
-            if (a.points !== b.points) {
-                return (a.points - b.points) * mult;
-            }
-            if (a.ballsRemaining !== b.ballsRemaining) {
-                return a.ballsRemaining - b.ballsRemaining;
-            }
-            return a.foulsOnBlack - b.foulsOnBlack;
+            return (a.position || 0) - (b.position || 0);
         }
 
-        if (field === 'foulsOnBlack') {
-            if (a.foulsOnBlack !== b.foulsOnBlack) {
-                return (a.foulsOnBlack - b.foulsOnBlack) * mult;
+        if (['foulsOnBlack', 'ballsRemaining', 'wins', 'losses', 'played'].includes(field)) {
+            if (a[field] !== b[field]) {
+                return (a[field] - b[field]) * mult;
             }
-            return b.points - a.points;
-        }
-
-        if (field === 'ballsRemaining') {
-            if (a.ballsRemaining !== b.ballsRemaining) {
-                return (a.ballsRemaining - b.ballsRemaining) * mult;
-            }
-            return b.points - a.points;
-        }
-
-        if (field === 'wins') {
-            if (a.wins !== b.wins) {
-                return (a.wins - b.wins) * mult;
-            }
-            return b.points - a.points;
-        }
-
-        if (field === 'losses') {
-            if (a.losses !== b.losses) {
-                return (a.losses - b.losses) * mult;
-            }
-            return b.points - a.points;
-        }
-
-        if (field === 'played') {
-            if (a.played !== b.played) {
-                return (a.played - b.played) * mult;
-            }
-            return b.points - a.points;
+            return (a.position || 0) - (b.position || 0);
         }
 
         if (field === 'name') {

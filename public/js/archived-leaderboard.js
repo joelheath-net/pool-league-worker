@@ -15,26 +15,7 @@ async function populateArchive() {
             seasonNameEl.textContent = seasonInfo?.name || 'Archived Season';
         }
 
-        currentArchivedPlayers = leaderboard.map(playerStats => {
-            const played = playerStats.wins + playerStats.losses;
-            const winLossRatio = playerStats.losses > 0
-                ? (playerStats.wins / playerStats.losses).toFixed(2)
-                : (playerStats.wins > 0 ? "∞" : "0.00");
-            const ratioNumeric = playerStats.losses > 0
-                ? (playerStats.wins / playerStats.losses)
-                : (playerStats.wins > 0 ? Infinity : 0);
-            const color = playerStats.teamColor || '#ffffff';
-            const textColor = getContrastingTextColor(color);
-
-            return {
-                ...playerStats,
-                played,
-                winLossRatio,
-                ratioNumeric,
-                color,
-                textColor
-            };
-        });
+        currentArchivedPlayers = leaderboard;
 
         setupLeaderboardControls({
             getData: () => currentArchivedPlayers,

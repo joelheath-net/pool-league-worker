@@ -19,12 +19,10 @@
 	"observability": {
 		"enabled": true
 	},
-	"d1_databases": [
+	"routes": [
 		{
-			"binding": "DB",
-			"database_name": "pool-league-db",
-			"database_id": "54acd17f-9360-4d8a-bc2c-5ecf9beacb70",
-			"migrations_dir": "migrations"
+			"pattern": "stpaulsleague.joelheath.net",
+			"custom_domain": true
 		}
 	],
 
@@ -40,6 +38,15 @@
 	 * databases, object storage, AI inference, real-time communication and more.
 	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
 	 */
+
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "pool-league-db",
+			"database_id": "54acd17f-9360-4d8a-bc2c-5ecf9beacb70",
+			"migrations_dir": "migrations"
+		}
+	],
 
 	/**
 	 * Environment Variables
